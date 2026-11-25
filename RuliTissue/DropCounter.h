@@ -1,0 +1,42 @@
+﻿#pragma once
+
+#include <functional>
+
+// 물방울 아이콘 + 숫자 카운터 (영상 상세 정보 별점 오른쪽)
+//  - 클릭: +1, 오른쪽 클릭: [초기화] 메뉴 → 0
+//  - 값이 바뀌면 m_onChanged(새 값)
+class CDropCounter : public CWnd
+{
+public:
+	std::function<void(int)> m_onChanged;
+
+	bool Create(CWnd* parent, UINT id);
+	void SetColors(COLORREF back, COLORREF normal, COLORREF hover);
+	void SetCount(int count);
+	int  GetCount() const { return m_count; }
+	int  NeededWidth(int height) const;   // 아이콘(높이 크기 정사각형) + 숫자에 꼭 맞는 폭 - 메인 창이 이 폭으로 배치 (여백 없이)
+
+protected:
+	int  m_count = 0;
+	bool m_hover = false;
+	bool m_tracking = false;
+	COLORREF m_back = TCOL(TC_BACK);
+	COLORREF m_normal = TCOL(TC_TEXT);
+	COLORREF m_hoverColor = RGB(0x48, 0xAF, 0xF0);
+	CToolTipCtrl m_tip;
+
+	void Change(int count);
+	CRect ContentRect() const;   // 아이콘 + 숫자 자리 (창은 칸 폭만큼 넓지만 마우스 오버 · 클릭 · 손 모양 커서는 이 자리만)
+	bool InContent(CPoint pt) const { return ContentRect().PtInRect(pt) != FALSE; }
+	afx_msg BOOL OnSetCursor(CWnd* pWnd, UINT nHitTest, UINT message);
+	afx_msg void OnPaint();
+	afx_msg BOOL OnEraseBkgnd(CDC*) { return TRUE; }
+	afx_msg void OnLButtonDown(UINT nFlags, CPoint point);
+	afx_msg void OnLButtonDblClk(UINT nFlags, CPoint point);
+	afx_msg void OnRButtonUp(UINT nFlags, CPoint point);
+	afx_msg void OnMouseMove(UINT nFlags, CPoint point);
+	afx_msg LRESULT OnMouseLeave(WPARAM, LPARAM);
+	afx_msg void OnEnable(BOOL bEnable);
+	virtual BOOL PreTranslateMessage(MSG* pMsg);
+	DECLARE_MESSAGE_MAP()
+};

@@ -1,0 +1,404 @@
+﻿#pragma once
+
+#include <functional>
+
+// 동영상 한 개의 정보
+struct VideoItem
+{
+	CString   path;          // 전체 경로
+	CString   code;          // 품번 (예: SONE-479, 비어 있으면 파일 이름에서 자동으로 찾음)
+	CString   title;         // 제목 (파일 이름과 별개, 비어 있으면 파일 이름 사용)
+	ULONGLONG size = 0;      // 바이트
+	ULONGLONG modified = 0;  // FILETIME (UTC) 64비트 값
+	int       censor = 0;    // 검열: 0 해당없음, 1 검열됨, 2 모자이크파괴, 3 무수정, 4 무수정-유출, 5 LTX (DB V 줄 18번째 칸 - 저장 값, 보이는 순서는 kCensorOrder)
+	int       rating = 0;    // 별점 0~10 (반 별 단위, 7 = 3.5점) - DB 에는 "3.5" 처럼 점수로
+	int       oCount = 0;    // 물방울 카운트 (상세 정보 별점 오른쪽, 클릭마다 +1)
+	CString   actors;        // 쉼표로 구분된 배우
+	CString   actorAliases;  // 이 작품에서 배우가 쓴 별칭 (쉼표 구분)
+	CString   studio;        // 스튜디오 (1개)
+	CString   label;         // 레이블 (스튜디오 하위, 1개 - 스튜디오의 레이블 목록에 자동 등록)
+	CString   series;        // 시리즈 (레이블 하위, 1개) = 품번 접두어 시리즈 - 품번 DB(제작사 · 레이블의 시리즈 목록)에 있는 것만 (없는 값은 자동 등록하지 않고 seriesTitle 로)
+	CString   seriesTitle;   // 시리즈 이름 (품번 시리즈와 별개의 자유 글자 - 영상 상세 [시리즈] 칸)
+	CString   release;       // 발매일 "YYYY-MM-DD" (없으면 빈 문자열)
+	CString   tags;          // 쉼표로 구분된 태그
+	CString   memo;          // 메모 (여러 줄)
+	CString   collections;   // 이 영상이 들어 있는 컬렉션 (쉼표 구분, DB V 줄 19번째 칸)
+	int       playCount = 0; // 재생 횟수 (DB V 줄 20번째 칸) - 내장 플레이어는 1분 또는 길이 10% 넘게 재생하면 1회, 외부 플레이어는 열 때 1회
+	CString   lastPlayed;    // 마지막 재생 "YYYY-MM-DD HH:MM" (DB V 줄 21번째 칸, 없으면 빈 문자열)
+	CString   actorRoles;    // 배우 역할 "배우 이름:1, 배우 이름:2" (1 = 주연, 2 = 조연, 3 = 단역, 4 = 카메오, 적혀 있지 않으면 알 수 없음) - DB V 줄 23번째 칸 (#배우번호:역할)
+	mutable CString prevKey; // 미리보기 파일 이름 (<DB 폴더>\previews\<키>.mp4, DB V 줄 22번째 칸 · P 줄 5번째 칸) - 처음 쓸 때 그때 경로로 한 번 정하고, 영상을 옮겨도 바꾸지 않음
+	bool      pending = false; // 임시 항목: 스캔으로 찾았지만 아직 정보를 저장하지 않음 (pending.tsv 에 기록)
+
+	CString FileName() const { return CString(::PathFindFileNameW(path)); }
+};
+
+// 배우 한 명의 정보 (동영상의 actors 에는 배우 이름이 쉼표로 저장됨)
+struct ActorInfo
+{
+	mutable int id = 0; // 고유 번호 (1 ~ 99999999, DB 에는 8자리 "00000001") - 0 = 아직 없음 (저장할 때 부여), 이름이 바뀌어도 그대로
+	CString name;      // 이름 (중복 불가)
+	CString lastAlias; // 영상 배우 칩에서 마지막으로 고른 별칭 (새로 배우를 넣을 때 초기값)
+	CString aliases;   // 별칭 (여러 개, 쉼표 구분) - 동영상의 배우 칸에 별칭으로 적혀 있어도 이 배우로 연결
+	CString gender;    // 성별 "여성" / "남성" / "트랜스젠더 남성" / "트랜스젠더 여성" / "인터섹스" / "논바이너리" (비어 있으면 미지정)
+	CString birth;     // 생년월일 "YYYY-MM-DD"
+	CString nationality; // 국적
+	CString height;    // 키 (cm, 숫자)
+	CString debut;     // 데뷔일 "YYYY-MM-DD"
+	CString retire;    // 은퇴일 "YYYY-MM-DD" (비어 있으면 활동 중/모름)
+	int     rating = 0; // 별점 0~10 (반 별 단위, 0 = 없음) - DB 에는 "3.5" 처럼 점수로
+	bool    favorite = false; // 즐겨찾기 (배우 카드 오른쪽 위 하트)
+	CString bust;      // 치수: 가슴 (cm, 숫자)
+	CString waist;     // 치수: 허리
+	CString hip;       // 치수: 엉덩이
+	CString cup;       // 컵 ("A" ~ "Q", 비어 있으면 미지정)
+	CString photo;     // 사진 파일 경로
+	CString memo;      // 메모
+	CString urls;      // 링크 URL (여러 개, 줄바꿈 \n 으로 구분)
+};
+
+// 스튜디오 / 태그 한 개의 정보 (동영상에는 이름으로 저장됨)
+struct NamedInfo
+{
+	CString name;    // 이름 (중복 불가)
+	CString memo;    // 메모
+	CString image;   // 이미지(로고 등) 파일 경로
+	CString subName; // 서브이름 (제작사 · 레이블 · 태그(다른 이름), 여러 개 줄바꿈 \n 구분 - 쉼표는 이름의 일부, 보조 표기 예: S1 NO.1 STYLE → 에스원 / S1) - 이 이름으로 적혀 있어도 같은 스튜디오
+	CString parent;  // 상위 제작사 이름 - 레이블: 그 레이블의 제작사 (labelInfos 항목), 제작사: 상위 제작사 (여러 단계 가능 · 순환 불가, 비우면 최상위)
+	CString series;  // 제작사 · 레이블: 시리즈 (여러 개, 한 줄에 하나 "이름␟품번␟라벨␟설명" - ParseSeries / JoinSeries, 시리즈 하나는 제작사나 레이블 하나에만)
+	CString urls;    // 제작사 · 레이블: 링크 URL (여러 개, 줄바꿈 \n 구분 - SplitUrls / JoinUrls)
+	CString nameEn;  // 태그: 영어 이름 (카드에 "한글 (영어, 일본어)", 텍스트 · 붙여넣기에서 이 이름도 그 태그로)
+	CString nameJa;  // 태그: 일본어 이름
+	bool    favorite = false;   // 즐겨찾기 (태그 카드 오른쪽 위 하트)
+};
+
+enum NamedListKind { LIST_STUDIO = 0, LIST_TAG = 1 };
+
+// 시리즈 한 개 (제작사 · 레이블의 series 에 한 줄씩: 이름 ␟ 품번 접두어 ␟ 라벨 ␟ 설명)
+// 복합 레이블의 한 레이블: 같은 품번 접두어 안에서 뒷번호로 나뉨 (예: ABC-101, ABC-102 = 레이블 A / ABC-150 = 레이블 B)
+struct SubLabel
+{
+	CString label;   // 레이블명
+	CString nums;    // 뒷번호 (여러 개, 쉼표 구분 - 예: "101, 102, 150")
+};
+
+struct SeriesInfo
+{
+	CString name;    // 시리즈 = 품번 접두어 (예: SONE, 쉼표로 여러 개도 가능) - 영상 품번이 이 접두어면 이 시리즈로 자동 지정
+	CString code;    // (예전 형식의 품번 칸 - 읽을 때 name 으로 옮김, 쓰지 않음)
+	CString label;   // 레이블 (레이블 개편 - 예전 "라벨")
+	CString desc;    // 설명
+	CString altNames; // 레이블 다른 이름 (여러 개, 줄바꿈 \n 구분 - DB 시리즈 칸 여섯째 칸에는 ␞ 로 이어서)
+	CString image;   // 레이블 대표 이미지 (이미지 보관소 studios 폴더의 복사본, 메모리에는 전체 경로 - DB 에는 보관소 기준 상대 경로)
+	bool    composite = false;      // 레이블 구분: false = 싱글 (label 하나), true = 복합 (subs - 품번 뒷번호로 레이블을 고름, 맞는 번호가 없으면 레이블 없음)
+	std::vector<SubLabel> subs;     // 복합 레이블 목록 (DB 시리즈 칸 일곱째 칸 = "C", 여덟째 칸 = 레이블␝번호␞레이블␝번호 …)
+};
+
+// 동영상 라이브러리 (목록 + 등록 폴더 + 배우 + 스튜디오 + 태그 + 저장/불러오기)
+// 데이터 파일: %APPDATA%\VideoManager\library.tsv (UTF-8, 탭 구분)
+class CVideoLibrary
+{
+public:
+	std::vector<VideoItem> items;
+	std::vector<CString>   folders;
+	// 이동식 디스크(USB · 외장 하드)로 등록한 폴더: 키 = MakeKey(폴더), 볼륨 일련번호로 같은 디스크인지 확인
+	//  - 디스크가 연결되지 않았으면(또는 다른 디스크면) 그 폴더의 영상 정보를 지우지도 다시 스캔하지도 않음
+	//  - 드라이브 문자가 바뀌어도 일련번호로 찾아 폴더 · 영상 경로를 새 문자로 바꿈
+	struct RemovableInfo { DWORD serial = 0; CString label; bool online = false; };
+	std::map<CString, RemovableInfo> removableFolders;
+	std::vector<ActorInfo> actors;
+	std::vector<NamedInfo> studios;
+	std::vector<NamedInfo> tagInfos;
+	std::vector<NamedInfo> collectionInfos;   // 컬렉션 (컬렉션 탭 - 이름(제목) · 커버 이미지(image) · 메모 · 즐겨찾기, 영상은 VideoItem::collections 에 이름으로)
+	std::vector<NamedInfo> labelInfos;   // 레이블 (제작사 하위, parent = 상위 제작사 이름) - 이름 · 서브이름 · 이미지 · 메모
+
+	bool Load();
+	bool Save() const;               // DB 파일은 AES 로 암호화해서 저장 (DbCrypt.h)
+	bool LoadedPlainText() const { return m_loadedPlainText; }
+	// DB 프로그램 버전: 저장할 때 "#AppVersion\t<버전>" 줄로 기록 (예전 DB 는 빈 문자열)
+	const CString& DbVersion() const { return m_dbVersion; }
+	static CString AppVersion();                                      // 지금 프로그램 버전 (Version.h)
+	static int  CompareVersions(const CString& a, const CString& b);   // a < b: 음수, 같음: 0, a > b: 양수 (빈 문자열 = 가장 낮음)
+	static bool BackupDataFile(const CString& dbVersion, CString& backupPath);   // 원본 DB → <DB 폴더>\DbBackup\library_v<버전>_<날짜시각>.vmdb
+	int  ConvertDb(const CString& fromVersion);                       // 예전 버전 DB 변환 (반환: 바뀐 단계 수)
+	// 배우 고유 번호: DB 의 영상 배우 칸은 "#00000001", 참여 별칭은 "#00000001:과거이름" 으로 저장 (읽을 때 이름으로 바꿈)
+	void AssignActorIds() const;                                      // 번호 없는(또는 겹치는) 배우에 새 번호 (다음 번호부터, 지운 번호는 다시 쓰지 않음)
+	int  FindActorById(int id) const;                                 // 번호로 배우 찾기 (-1 = 없음)
+	static CString ActorIdText(int id);                               // "00000001"
+	// 별점 (반 별 단위 0 ~ 10) ↔ 글자 "3.5" / "3" (0 = 빈 문자열) - 예전 DB 의 정수 "3" 은 별 3개(6)로 읽음
+	static CString RatingValueText(int halfUnits);
+	// 배우 · 제작사(레이블 포함) · 태그 DB 를 암호화하지 않은 텍스트로 내보내기 / 그 파일로 일괄 등록 (설정 창 [DB 관리])
+	enum { EXPORT_ACTORS = 0, EXPORT_STUDIOS = 1, EXPORT_TAGS = 2, EXPORT_VIDEOS = 3, EXPORT_SERIES = 4 };   // SERIES = 품번 DB (R 줄 - 품번 항목 하나씩)
+	bool ExportListFile(int what, const CString& path) const;
+	bool ImportListFile(int what, const CString& path, int& added, int& updated);   // 같은 항목은 파일의 값이 있는 칸만 덮어씀
+	// 검열 정보: 이름은 설정 창에서 고른 언어 (0 = 한글, 1 = 영어, 2 = 일본어)
+	static const int kCensorCount = 6;
+	// 보이는 순서 (콤보 · 목록): 해당없음, 검열됨, 모자이크파괴, LTX, 무수정, 무수정-유출 - LTX(5) 는 나중에 더해 저장 값은 뒤, 순서만 모자이크파괴와 무수정 사이
+	static int CensorValueAt(int order) { static const int k[kCensorCount] = { 0, 1, 2, 5, 3, 4 }; return (order >= 0 && order < kCensorCount) ? k[order] : 0; }
+	static int CensorOrderOf(int value) { for (int i = 0; i < kCensorCount; ++i) if (CensorValueAt(i) == value) return i; return 0; }
+	static const wchar_t* CensorName(int index, int lang = -1);       // lang -1 = 설정 언어
+	static int  ParseCensor(const CString& text);                     // 세 언어 이름 중 하나 → 번호 (없으면 -1)
+	static void SetCensorLang(int lang);
+	static int  CensorLang();
+	static int     ParseRatingValue(const CString& text);             // "3.5" → 7, "3" → 6, 범위 밖 · 빈칸 → 0
+   // 예전 평문 DB 를 읽었음 → 바로 저장하면 암호화됨
+	bool DbBroken() const { return m_dbBroken; }
+	// 작업 DB: 실행 중에는 library.work.vmdb 에 저장하고 [DB 반영] / 종료 때 library.vmdb 로 반영
+	bool HasUnappliedChanges() const { return m_workDirty; }   // 작업 DB 에 반영 안 한 변경이 있음
+	bool ApplyWorkDb();                                         // 작업 DB → library.vmdb (원자적 교체)
+	std::function<void()> m_onSaved;                            // 작업 DB 에 저장할 때마다 (버튼 상태 갱신용)                 // 암호화된 DB 를 풀지 못함 (저장 안 함)
+
+	// 폴더를 등록하고 하위 폴더까지 스캔합니다. 새로 추가된 개수를 반환.
+	int  AddFolder(const CString& folder, bool removable = false);   // removable: 이동식 디스크 폴더로 등록
+	bool IsRemovableFolder(const CString& folder) const;
+	bool IsRemovableItem(const CString& path, bool* online = nullptr) const;   // 이동식 폴더의 영상인지 (online: 지금 연결됨)
+	bool RemovableConnected(const CString& folder) const;   // 이동식 폴더의 디스크가 지금 연결되어 있는지 (같은 일련번호)
+	int  RemapRemovableDrives();       // 드라이브 문자가 바뀐 이동식 디스크를 찾아 폴더 · 영상 경로를 바꿈 (반환: 바꾼 폴더 수)
+	void UpdateRemovableState();       // 이동식 폴더별 연결 상태 갱신 (화면 표시용)
+	// 등록 폴더를 제거하고, 다른 등록 폴더에 속하지 않는 항목을 목록에서 제거합니다.
+	void RemoveFolder(size_t index);
+	// 모든 등록 폴더를 다시 스캔합니다.
+	void Refresh(int& added, int& removed, int* relinked = nullptr);
+	// 경로가 바뀐(옮기거나 이름을 바꾼) 파일 다시 연결: 없어진 DB 항목을 스캔에서 새로 찾은 파일과 맞춰 경로만 고침
+	//   같은 파일로 보는 기준: 크기가 같고 (파일 이름이 같거나 수정 시각이 같음)
+	int  RelinkMoved(const std::vector<VideoItem>& scanned);
+	int  RelinkOnStartup();   // 프로그램 시작 시: 없어진 항목이 있을 때만 폴더를 스캔해서 다시 연결 (추가/삭제는 안 함)
+
+	int  FindByPath(const CString& path) const;
+
+	// 배우
+	int  FindActor(const CString& name) const;                 // 이름(대소문자 무시)으로 찾기
+	// 동영상의 배우 표기(이름 또는 별칭)로 배우 찾기: 이름이 우선, 없으면 별칭
+	int  FindActorByAnyName(const CString& name) const;
+	int  FindActorByNamePart(const CString& name, int exclude = -1) const;
+	int  MergeEmptyDuplicateActors();
+	int  FindLabelLoose(const CString& label) const;       // 레이블 이름 · 서브이름으로 찾기 (공백 · 대소문자 · 기호 무시, labelInfos 인덱스)
+	int  FindStudioByLabel(const CString& label, CString* labelName = nullptr) const;   // 레이블 이름으로 그 레이블을 가진 스튜디오 찾기 (공백 · 대소문자 · 기호 무시, 없으면 -1) / labelName: 등록된 표기
+	void ResolveVideoLabel(VideoItem& v) const;            // 스튜디오 칸에 레이블 이름이 적혔으면 → 상위 스튜디오 + 레이블, 레이블만 있으면 상위 스튜디오 채움
+	int  FindStudioLoose(const CString& name) const;   // 스튜디오 이름 · 서브이름으로 찾기 (그대로 → 공백 · 대소문자 · 기호 무시 순, 없으면 -1)
+	static bool SameNameByLang(const CString& a, const CString& b);
+	static int  NameLangCount(const CString& name);   // 이름의 구성요소(언어) 수: "한글(English, 日本語)" = 3
+	static void    SplitNameByLang(const CString& name, CString& ko, CString& en, CString& ja);   // "한글(English, 日本語)" → 언어별 첫 이름 (없으면 빈칸, 언어를 가를 수 없는 조각은 무시)
+	static CString ComposeFullName(const CString& existing, const CString& web);   // 기존 이름 + 웹 이름 → "한글(English, 日本語)" (언어마다 기존 표기 우선, 없는 언어만 웹에서)
+	// 성별 목록 (저장 값, 순서 = 배우 관리 창 콤보 순서, 0번 = 미지정 "")
+	static int     GenderCount();
+	static CString GenderAt(int i);
+	static CString NormalizeGender(const CString& text);   // "Female" / "Transgender Female" / "MTF" / "女性" … → 저장 값 (모르면 빈 문자열)
+	static bool    IsFemaleLike(const CString& g);         // 여성 · 트랜스젠더 여성 (여성 실루엣 기본 이미지)
+	static bool    IsMaleLike(const CString& g);           // 남성 · 트랜스젠더 남성 (남성 실루엣 기본 이미지)   // 두 이름의 한글 / 영어 / 일어 조각 중 같은 언어끼리 하나라도 같으면 true
+	bool CleanupActorAliases();          // 배우 이름(또는 앞의 별칭)과 언어 단위로 같은 별칭은 뺌 (영상의 참여 별칭도 정리, 변경 시 true)   // 정보가 하나도 없는 배우가 다른 배우와 언어 단위 이름이 같으면 그 배우로 합침 (반환: 합친 수)   // 이름의 한글 / 영어 / 일어 조각(괄호 앞 · 괄호 안) 단위로 같은 배우 (없으면 -1)
+	// 이름/별칭(소문자) → 배우 인덱스 (반복 조회용, 이름이 별칭보다 우선)
+	std::map<CString, int> ActorNameIndex() const;
+	// 동영상의 배우 표기 → 연결된 배우 이름(소문자). 목록에 없으면 표기 그대로(소문자)
+	CString ActorKeyOf(const std::map<CString, int>& index, const CString& videoName) const;
+	// 영상의 배우 칸에 별칭으로 적힌 배우를 본래 이름으로 바꾸고 그 별칭은 "참여 별칭"으로 옮김,
+	// 배우 칸에 없는 배우의 참여 별칭은 정리 (변경되면 true)
+	bool NormalizeVideoActors(VideoItem& v) const;
+	bool NormalizeAllVideoActors();
+	bool FillMissingActorPhotos();                               // 사진 없는 배우를 배우 폴더의 이미지로 채움 (변경 시 true)
+	bool SyncActorsFromVideos();                                 // 동영상에만 있는 배우 이름을 배우 목록에 추가
+	void RenameActorInVideos(const CString& oldName, const CString& newName);
+	int  RemoveActorFromVideos(const CString& name);            // 반환: 영향 받은 동영상 수
+	int  CountVideosWithActor(const CString& name) const;
+	CString FindCodeOnDate(const CString& actorName, const CString& date) const;
+	int     FindVideoOnDate(const CString& actorName, const CString& date) const;   // 위 영상의 인덱스 (없으면 -1)   // 그 배우가 나온 영상 중 발매일이 date 인 영상의 품번 (데뷔작 표시, 없으면 빈 문자열)
+
+	// 스튜디오 / 태그 (kind = LIST_STUDIO / LIST_TAG)
+	std::vector<NamedInfo>&       NamedList(int kind)       { return kind == LIST_STUDIO ? studios : tagInfos; }
+	const std::vector<NamedInfo>& NamedList(int kind) const { return kind == LIST_STUDIO ? studios : tagInfos; }
+	int  FindNamed(int kind, const CString& name) const;
+	// 레이블 (제작사 하위)
+	// 컬렉션: 영상의 collections 칸에 이름으로 (분할 파일 묶음은 함께), 임시 영상을 넣으면 정식 등록
+	int  FindCollection(const CString& name) const;              // 이름으로 찾기 (대소문자 무시, 없으면 -1)
+	bool AddToCollection(size_t idx, const CString& name);       // 영상을 컬렉션에 (없는 컬렉션이면 만듦) - 바뀌었으면 true
+	bool RemoveFromCollection(size_t idx, const CString& name);  // 영상을 컬렉션에서 뺌
+	bool RenameCollection(const CString& oldName, const CString& newName);   // 이름 변경 (영상 쪽도), 같은 이름이 있으면 false
+	int  DeleteCollection(const CString& name);                  // 컬렉션 삭제 (영상에서도 빠짐, 영상 파일은 그대로) - 빠진 영상 수
+	bool InCollection(const VideoItem& v, const CString& name) const;
+	int  FindLabel(const CString& name) const;                   // 레이블 이름 · 서브이름으로 찾기 (대소문자 무시, 없으면 -1)
+	std::vector<int> LabelsOf(const CString& studioName) const;
+	std::vector<int> ChildStudiosOf(const CString& studioName) const;   // 바로 아래 하위 제작사 (studios 인덱스, 이름 순)
+	bool IsStudioDescendant(const CString& name, const CString& ancestor) const;   // name 이 ancestor 의 하위(여러 단계)이거나 같으면 true - 순환 연결 막기용
+	std::vector<CString> StudioParentChain(const CString& studioName) const;      // 상위 제작사들 (가까운 것부터, 순환이면 거기서 멈춤)   // 이 제작사의 레이블 (labelInfos 인덱스, 이름 순)
+	std::vector<CString> LabelNamesOf(const CString& studioName) const;
+	int  CountLabelVideos(const CString& labelName) const;       // 이 레이블이 지정된 영상 수
+	// 시리즈 (레이블 하위, 레이블의 series 목록)
+	int  FindLabelOfSeries(const CString& series, CString* seriesName = nullptr) const;   // 이 시리즈를 가진 레이블 (labelInfos 인덱스, 없으면 -1) / seriesName: 등록 표기
+	static std::vector<SeriesInfo> ParseSeries(const CString& text);   // series 칸 → 시리즈 목록 (이름 없는 줄 · 같은 이름 중복은 뺌)
+	static CString JoinSeries(const std::vector<SeriesInfo>& list);
+	static std::vector<CString> SeriesNames(const CString& text);     // series 칸의 시리즈 이름만
+	// 품번 → 품번 DB 항목: 같은 접두어가 여러 제작사에 있으면 studio(영상 제작사)와 같은 제작사의 항목, 없으면 찾지 못함 (*ambiguous = true)
+	CString SeriesForCode(const CString& code, const CString& studio = CString()) const;                  // 영상 품번의 접두어가 등록된 시리즈 (없으면 빈 문자열)
+	bool    SeriesInfoForCode(const CString& code, SeriesInfo& out, const CString& studio = CString(), bool* ambiguous = nullptr) const;   // 위와 같은 규칙으로 찾은 시리즈 정보 (레이블 · 설명 포함, 복합은 뒷번호의 레이블)
+	// 레이블 개편 (v0.8): 제작사 하위 레이블(labelInfos) 폐기 → 레이블 = 품번 DB(시리즈)의 "레이블" 칸
+	//  영상의 label 은 저장하지 않고 품번으로 품번 DB 에서 찾은 값 (RefreshDerivedLabels)
+	static CString CodePrefixOf(const CString& code);            // 품번 접두어 ('-' 앞, 없으면 앞쪽 영문 - 대문자)
+	static int     CodeNumberOf(const CString& code);            // 품번 뒷번호 (접두어 뒤 숫자, 앞의 0 무시 - 없으면 -1)
+	static std::vector<int> ParseSubNums(const CString& nums);   // 복합 레이블 뒷번호 칸 → 번호 목록 (쉼표 · 공백 · 줄바꿈 구분)
+	static int     SubLabelIndex(const SeriesInfo& s, const CString& code);   // 복합 레이블에서 품번 뒷번호가 맞는 레이블 (없거나 싱글이면 -1)
+	CString LabelForCode(const CString& code, const CString& studio = CString()) const;   // 품번 DB 에서 찾은 레이블 (없으면 빈칸)
+	bool    FindCodeLabel(const CString& label, int& owner, int& index, int* sub = nullptr) const;   // sub: 복합 레이블의 몇 번째 레이블 (싱글 · 다른 이름이면 -1)   // 품번 DB 레이블명 · 다른 이름으로 항목 찾기 (owner -1 = 제작사 없는 항목, 대소문자 · 공백 · 기호 무시)
+	bool    AddCodeLabelAltName(int owner, int index, const CString& name); // 품번 DB 항목의 "다른 이름" 에 추가 (레이블명 · 이미 있는 이름이면 false)
+	CString LabelImage(const CString& label) const;              // 그 레이블 이름을 가진 품번 DB 항목의 대표 이미지 (처음 찾은 것, 없으면 빈칸 - RefreshDerivedLabels 때 만든 표)
+	std::map<CString, CString> m_labelImages;                   // 레이블(소문자) → 대표 이미지 (RefreshDerivedLabels)
+	CString looseSeries;                                         // 제작사 없는 품번 DB 항목 (시리즈 칸 형식 - DB "Q" 줄)
+	bool    SeriesRegistered(const CString& series) const;       // 품번 DB(제작사 · 제작사 없음)에 있는 시리즈 이름인지
+	// 영상의 배우 역할 (actorRoles): 0 = 알 수 없음 (기본, 저장하지 않음), 1 = 주연, 2 = 조연, 3 = 단역, 4 = 카메오
+	enum { ROLE_UNKNOWN = 0, ROLE_MAIN = 1, ROLE_SUPPORT = 2, ROLE_MINOR = 3, ROLE_CAMEO = 4, ROLE_LAST = ROLE_CAMEO };
+	static bool ValidRole(int r) { return r > ROLE_UNKNOWN && r <= ROLE_LAST; }
+	static int  RoleOf(const VideoItem& v, const CString& actorName);         // 그 배우 이름(대표 이름)의 역할
+	static bool SetRole(VideoItem& v, const CString& actorName, int role);    // 역할 지정 (알 수 없음 = 지움), 바뀌면 true
+	static void PruneRoles(VideoItem& v);                                     // 배우 칸에 없는 배우의 역할은 뺌
+	int     SeriesCount() const;                                 // 품번 DB 항목 수 (제작사 아래 + 제작사 없음) - 설정 [DB 삭제]
+	void    ClearSeriesDb();                                     // 품번 DB 모두 삭제 (제작사 · 제작사 없음 항목, 영상의 시리즈 칸 - 영상의 품번은 그대로)
+	void    MoveStudioSeriesToLoose();                           // 제작사 아래 품번 항목을 제작사 없는 항목으로 (제작사만 지울 때 품번은 남김, 같은 접두어는 하나만)
+	// 품번이 속한 품번 DB 자리: owner = studios 인덱스 (studios.size() = 제작사 없는 항목), index = 그 목록의 순번 (레이블 순번), part = 항목 안 접두어 순서 - 없으면 false
+	bool    SeriesSlotForCode(const CString& code, int& owner, int& index, int& part, int* sub = nullptr,
+	                          const CString& studio = CString(), bool* ambiguous = nullptr) const;   // owner: studios 인덱스 (studios.size() = 제작사 없는 항목), sub: 싱글 -1, 복합 = 맞는 레이블 번호 (없으면 -2)
+	void    RefreshDerivedLabels();                              // 모든 영상의 label = LabelForCode(code)
+	int     FillSeriesLabel(const CString& code, const CString& label);   // 품번의 시리즈 레이블이 비어 있으면 채움 - 0 = 시리즈 없음, 1 = 채움, 2 = 이미 있음
+	bool    MigrateLabelsToSeries(CString* report = nullptr);    // 예전 레이블 → 품번 DB 레이블 (레이블 목록이나 영상 레이블 값이 있을 때만, 바꿨으면 true)
+	int  FindStudioOfSeries(const CString& series, CString* seriesName = nullptr) const;  // 이 시리즈를 가진 제작사 (studios 인덱스, 없으면 -1)
+	std::vector<CString> AllSeries() const;                      // 모든 레이블의 시리즈 + 영상에만 있는 시리즈 (이름 순, 중복 제거)
+	void RenameLabelInVideos(const CString& oldName, const CString& newName);
+	int  RemoveLabel(int labelIdx);                              // 레이블 삭제 (영상의 레이블도 비움) → 영향받은 영상 수
+	void SetLabelParent(int labelIdx, const CString& parent);    // 상위 제작사 변경 (그 레이블 영상의 제작사도 바뀜)
+	int  StudioToLabel(int studioIdx, const CString& parent);    // 제작사 → 레이블 (영상: 제작사 = 상위, 레이블 = 이 이름) → 새 레이블 인덱스
+	int  LabelToStudio(int labelIdx);                            // 레이블 → 제작사 (영상: 제작사 = 이 이름, 레이블 비움) → 새 제작사 인덱스
+	bool SyncNamedFromVideos();                                  // 동영상에만 있는 이름을 목록에 추가
+	void RenameNamedInVideos(int kind, const CString& oldName, const CString& newName);
+	int  RemoveNamedFromVideos(int kind, const CString& name);
+	std::map<CString, int> CountNamed(int kind) const;          // 이름(소문자) → 영상 수
+	static std::vector<CString> VideoNamedValues(const VideoItem& v, int kind);
+
+	static std::vector<CString> SplitList(const CString& text); // 쉼표 구분 → 목록 (공백 제거, 괄호 안 쉼표는 이름의 일부)
+	// 목록 구분 쉼표 찾기: 괄호 ( ) / （ ） 안의 쉼표는 구분자가 아님 → "나기 히카루(Hikaru Nagi, 凪ひかる)" 는 한 이름
+	static int  FindListComma(const CString& text, int start);          // start 이후 첫 구분 쉼표 (없으면 -1)
+	static int  ReverseFindListComma(const CString& text, int before);  // before 앞의 마지막 구분 쉼표 (없으면 -1)
+	static void RemoveListCommas(CString& text);                       // 이름에서 구분 쉼표만 지움 (괄호 안 쉼표는 유지)
+	static CString JoinList(const std::vector<CString>& list);
+	// 생년월일("YYYY-MM-DD")로 오늘 기준 만 나이 계산 (알 수 없으면 -1)
+	static int     CalcAge(const CString& birth);
+	// 배우 요약 문구: "1990-05-01 (36세)" / "36세" 등
+	static CString AgeText(const CString& birth);
+	// 텍스트에서 [YYYY.MM.DD] / [YYYYMMDD] 를 찾아 "YYYY-MM-DD" 로 반환 (없으면 빈 문자열)
+	static CString FindBracketDate(const CString& text);
+
+	static CString GetDataDir();           // DB 위치 = 실행 파일 폴더 (쓰기 권한이 없으면 %APPDATA%\VideoManager)
+	static CString GetAppDataDir();        // %APPDATA%\VideoManager (예전 DB 위치, 없으면 만듦)
+	// DB 는 두 파일: library.vmdb = 정보(library.tsv) + 임시 목록(pending.tsv), images.vmdb = 이미지 복사본 전부 (각각 AES 암호화)
+	//  - 실행 중 이미지는 캐시 폴더(%LOCALAPPDATA%\VideoManager\cache\images)에 풀어서 사용, 종료 시 지움
+	static CString GetWorkDbPath();        // <실행 파일 폴더>\library.work.vmdb (실행 중 작업 DB)
+	static bool    HasLeftoverWorkDb();    // 이전 실행에서 반영하지 않고 남은 작업 DB 가 있음 (원본과 내용이 다를 때만)
+	static void    DiscardWorkDb();        // 남은 작업 DB 버리기
+	static bool    ApplyLeftoverWorkDb();  // 남은 작업 DB 를 원본에 반영
+	static CString GetDataFilePath();      // <실행 파일 폴더>\library.vmdb (정보 + 임시 목록)
+	static CString GetImagesDbPath();      // <실행 파일 폴더>\images.vmdb (이미지 DB: 배우 사진 · 스튜디오 이미지 전체를 암호화해서 한 파일로)
+	static CString GetImageRoot();         // 이미지 캐시 폴더 <실행 파일 폴더>\cache\images (actors / studios — 기동 때 풀고 종료 때 지움)
+	static CString GetBackupDir();         // <DB 폴더>\backup (없으면 만듦)
+	// 프로그램 시작 시 DB 백업: library.vmdb 를 backup 폴더에 날짜·시각 이름으로 복사
+	//  - 가장 최근 백업과 내용이 같으면 그 파일은 건너뜀, 파일마다 최근 keep 개만 남김
+	//  - 반환: 새로 만든 백업 파일 수
+	static int     BackupDbFiles(int keep = 10);
+	// 이미지 DB(images.vmdb) ↔ 이미지 캐시 폴더
+	//  - LoadImageDb: 기동(Load) 때 images.vmdb 를 캐시로 풀기 (남은 캐시 · 예전 Image 폴더도 합침)
+	//  - SaveImageDb: 캐시 이미지를 images.vmdb 하나로 묶어 저장 (바뀐 것이 없으면 0, 저장 1, 실패 -1 → 캐시를 지우면 안 됨)
+	static void    LoadImageDb();
+	static int     SaveImageDb(CString* error = nullptr);
+	static bool    HasUnsavedImages();     // 이미지 DB 에 저장 안 한 캐시 변경이 있음 ([DB 반영] 활성)
+
+	// 이동식 디스크 영상의 커버 이미지 캐시 (디스크를 빼도 카드에 이미지 표시)
+	//  - 캐시 폴더 <실행 폴더>\cache\covers\<키 해시>.jpg (긴 변 640px 이하로 줄인 JPEG), 커버 DB covers.vmdb (암호화, 한 파일)
+	//  - 키 = 이동식 디스크 볼륨 일련번호 + 드라이브 문자를 뺀 경로 → 드라이브 문자가 바뀌어도 같은 캐시
+	//  - 기동 때 covers.vmdb → 캐시 폴더로 풀고, [DB 반영] · 종료 때 지금 이동식 영상의 것만 다시 묶음 (종료 때 저장에 성공하면 캐시 폴더 삭제)
+	CString        CoverCacheFile(const CString& videoPath) const;   // 이동식 영상이면 캐시 파일 경로, 아니면 빈 문자열
+	// 미리보기 파일 키: 영상마다 한 번 정해 DB 에 저장 (경로가 바뀌어도 그대로 → 탐색기로 옮겨도 미리보기가 끊기지 않음)
+	//  - 키가 없으면 basisPath 로 예전 방식 이름(경로 해시, 이동식 = 커버 캐시 키)을 씀 → 이미 만든 미리보기 파일이 그대로 맞음
+	//  - 다른 영상이 이미 그 키를 쓰면 basisPath + "#2" … 로 다른 키
+	//  - 영상 경로를 바꾸기 전에 FixPreviewKey(v, 옛 경로) 를 불러 둠 (RelinkMoved · CarryPreviewFiles)
+	const CString& PreviewKeyOf(const VideoItem& v) const { FixPreviewKey(v, v.path); return v.prevKey; }
+	void           FixPreviewKey(const VideoItem& v, const CString& basisPath) const;
+	CString        LegacyPreviewKey(const CString& videoPath) const;   // 예전 미리보기 이름 (경로로 정해짐)
+	static CString GetCoverCacheDir();
+	static CString GetCoversDbPath();
+	static bool    SaveCoverCache(const CString& srcImage, const CString& cacheFile);   // 원본 이미지 → 줄인 JPEG (임시 파일에 쓰고 바꿔치기, 다른 스레드에서도)
+	static void    LoadCoverDb();
+	int            SaveCoverDb(CString* error = nullptr) const;     // 바뀐 것 없으면 0, 저장 1, 실패 -1
+	static void    ClearCoverCache();
+	static CString GetLegacyImageDir();    // 예전 이미지 폴더 <실행 파일 폴더>\Image (기동 때 캐시로 옮기고 저장 성공 후 Image.bak)
+	static CString GetLegacyLibraryPath(); // 예전 정보 파일 library.tsv (처음 한 번 옮겨 오고 .bak 으로 바꿈)
+	static CString GetPendingFilePath();   // 예전 임시 목록 pending.tsv
+	static CString GetCacheDir();          // <실행 파일 폴더>\cache (실행 중 이미지를 풀어 두는 폴더)
+	static void    ClearImageCache();      // 이미지 캐시 지우기 (종료 시, SaveImageDb 가 성공했을 때만)
+	int  PendingCount() const;
+
+	// 등록 이미지 보관소: <이미지 캐시>\<sub> (배우 사진 · 스튜디오 이미지 평문 사본, 종료 때 images.vmdb 로 묶음)
+	static CString GetImageStoreDir(LPCWSTR sub = nullptr);
+	static bool    IsInImageStore(const CString& path);
+	// 이미지를 보관소로 복사하고 복사본 경로를 반환 (이미 보관소 안이면 그대로, 실패하면 빈 문자열)
+	// 영상 경로의 상위 폴더 중 배우 이름과 같은 폴더에서 이미지 파일 찾기 (없으면 빈 문자열)
+	static CString FindActorFolderImage(const CString& videoPath, const CString& actorName);
+	static CString FindActorFolder(const CString& videoPath, const CString& actorName);   // 배우 이름과 같은 상위 폴더 (없으면 빈 문자열)
+	static CString FindActorTextFile(const CString& dir, const CString& actorName);       // 배우 폴더의 텍스트 파일 (*.txt)
+	static bool    ApplyActorTextInfo(ActorInfo& a, const CString& file);                // 텍스트(항목: 값)에서 비어 있는 배우 정보 채우기
+	static bool    ApplyActorText(ActorInfo& a, CString text);                      // 위와 같은 규칙, 파일 대신 글자 (직접 입력 창)
+	static CString ActorInfoText(const ActorInfo& a);                                    // 배우 정보 → "항목: 값" 글자 ([정보 txt 생성]과 같은 형식)
+	static void    ClearActorTextFields(ActorInfo& a);
+	static std::vector<CString> SplitUrls(const CString& text);   // URL 목록 (줄바꿈 · 공백 · | 구분, 중복 제거)
+	static CString JoinUrls(const std::vector<CString>& urls);
+	static std::vector<CString> SplitLines(const CString& text);   // 줄마다 하나 (앞뒤 공백 · 빈 줄 · 중복 제거, 쉼표는 그대로) - 스튜디오 서브이름
+	static CString JoinLines(const std::vector<CString>& lines);   // 줄바꿈(\n)으로 이어 붙임   // 줄바꿈(\n)으로 이어 붙임                                   // 텍스트로 읽는 항목만 비움 (직접 입력 창 = 입력한 내용으로 교체)
+	static bool    HasNoActorInfo(const ActorInfo& a);
+	// 정보 txt 내보내기 (같은 폴더, 덮어쓰기 · 내용이 같으면 건너뜀). 반환: 새로 쓴 파일 수
+	static CString ExtractCode(const CString& name);
+	// 분할 파일 (ABC-123_1.mp4, ABC-123_2.mp4 …): 같은 폴더 + 마지막 '_' 왼쪽 이름이 같으면 한 묶음, 정보(품번 · 제목 · 별점 · 물방울 · 발매일 · 배우 · 스튜디오 · 태그)를 같이 사용
+	static bool PartGroupKey(const CString& path, CString& key, int& num);   // 묶음 키(소문자) + 순번 ("_" 오른쪽 숫자, 없으면 0 → false)
+	static CString PartGroupPath(const CString& path);                      // 순번을 뗀 대표 경로 (D:\a\ABC-123_2.mp4 → D:\a\ABC-123.mp4)
+	std::vector<size_t> PartSiblings(size_t idx) const;                      // 같은 묶음의 다른 영상 (자기 자신 제외)
+	int  SyncPartGroup(size_t idx);   // idx 의 정보를 같은 묶음 영상에 복사 (임시 항목도 등록됨). 반환: 바꾼 수
+	int  UnifyPartGroups();           // 묶음마다 비어 있는 정보를 다른 파일의 정보로 채움 (등록된 파일이 있으면 임시 파일도 등록). 반환: 바꾼 수
+	int  FillMissingCodes();   // 품번이 빈 영상은 파일/폴더 이름에서 찾아 채움 (반환: 채운 수)                          // 이름에서 품번 찾기 (ABC-123 / ABC123 → ABC-123, 없으면 빈 문자열)
+	static CString FindVideoTextFile(const CString& videoPath);                 // 영상 폴더의 정보 txt (같은 이름 → '_' 왼쪽 같은 이름 → 영상·txt 가 하나씩이면 그것)
+	bool ApplyVideoTextInfo(VideoItem& v, const CString& file) const;           // 텍스트(항목: 값)에서 비어 있는 영상 정보 채우기
+	bool ApplyVideoText(VideoItem& v, CString text, std::vector<CString>* rawTags = nullptr) const;   // 위와 같은 규칙, 파일 대신 글자 (직접 입력 창), rawTags: 태그 줄을 목록 이름으로 바꾸기 전 값 (태그 연결 창)
+	static CString VideoInfoText(const VideoItem& v);                           // 영상 정보 → "항목: 값" 글자 ([정보 txt 생성]과 같은 형식)
+	static void    ClearVideoTextFields(VideoItem& v);                          // 텍스트로 읽는 항목만 비움
+	// 웹페이지에서 복사한 글(AVDBS · FANZA 등 "출시: … / 출연: #이름 / 제작사: … / 레이블: … / 장르 상세 …") → "항목: 값" 글자
+	static CString ParsePastedVideoText(const CString& raw);
+	static CString ParsePastedActorText(const CString& raw);   // 배우 프로필 화면 복사 글 → "항목: 값" (ApplyActorText 형식)
+	int ExportVideoInfoTxt(int& unchanged, int& failed) const;                  // 영상 폴더\영상이름.txt (저장된 영상)
+	int ExportActorInfoTxt(int& unchanged, int& noFolder, int& failed) const;   // 배우 폴더\배우폴더이름.txt                                    // 생년월일·키·국적·치수 등이 모두 비어 있음
+	static CString StoreImageCopy(const CString& src, LPCWSTR sub, bool force = false);   // 평문 사본 (암호화된 .vmimg 은 풀어서), force: 보관소 안의 파일도 새 사본으로
+	bool MigrateImagesToStore();      // 보관소 밖 이미지(기존 데이터)를 복사본으로 교체 (변경 시 true)
+	// Image 폴더의 예전 암호화 사본(.vmimg)을 평문 사본으로 풀고 연결도 바꿈 (원래 .vmimg 은 지우지 않음)
+	bool DecryptImageStore();
+	static bool IsEncryptedFile(const CString& path);   // DbCrypt 형식으로 암호화된 파일인지
+	int  CleanupImageStore() const;   // 어디에도 연결되지 않은 복사본을 휴지통으로 (반환: 정리한 수)
+	static bool    IsVideoFile(LPCWSTR path);
+	static CString MakeKey(const CString& path);
+	static bool    IsUnder(const CString& path, const CString& folder);
+
+private:
+	bool m_loadedPlainText = false;
+	mutable std::set<CString> m_prevKeys;     // 쓰고 있는 미리보기 키 (소문자) - FixPreviewKey 가 겹치지 않게
+	mutable bool m_prevKeysReady = false;
+	CString m_dbVersion;   // 읽은 DB 의 프로그램 버전
+	mutable int m_nextActorId = 1;   // 다음에 줄 배우 번호 (DB "#ActorIdNext" 줄에 저장)
+	bool m_dbBroken = false;
+	mutable bool m_workDirty = false;
+	// 이미지가 바뀌지 않았으면 저장할 때 images.vmdb 를 다시 쓰지 않음
+	mutable CString           m_imgSig;
+	mutable bool              m_legacyToMove = false;   // 예전 파일을 옮겨 왔음 → 첫 저장 후 .bak 으로
+	bool ReadPackedDb(CString& text, CString& pending);
+	bool WritePackedDb(const CString& text, const CString& pending) const;
+	static CString ImageSignature(std::vector<CString>* files);   // 캐시 이미지 목록/크기/시각
+	static void ScanFolder(const CString& folder, std::vector<VideoItem>& out, int depth);
+	int  MergeScanned(const std::vector<VideoItem>& scanned);
+public:   // DB 삭제 시 임시 항목으로 되돌릴 때도 사용
+	// 등록 폴더 기준 폴더 구조로 배우/스튜디오 채우기 (새로 찾은 임시 항목에만 적용)
+	//   (영상 파일은 각자 영상 폴더 안에 있음 - 영상 폴더 이름은 배우/스튜디오로 쓰지 않음)
+	//   폴더\영상\영상.mp4               → 영상만
+	//   폴더\배우\영상\영상.mp4          → 배우
+	//   폴더\스튜디오\배우\영상\영상.mp4 → 스튜디오, 배우 (더 깊으면 위 두 단계 사용)
+	//   영상 파일 이름 / 영상 폴더 이름에 [YYYY.MM.DD] 또는 [YYYYMMDD] 가 있으면 발매일로 지정
+	void ApplyFolderStructure(VideoItem& v) const;
+};

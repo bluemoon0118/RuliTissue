@@ -1,0 +1,133 @@
+﻿#pragma once
+
+#include <functional>
+#include "SuggestEdit.h"
+
+// 태그 칩 입력: [태그 ×] [태그 ×] ... [입력 칸]          (×: 모두 지우기, ⌄: 목록에서 선택)
+//  - 칩의 × 를 누르면 그 태그 삭제, 입력 칸에 글자 입력 → Enter / 쉼표 / 목록 선택으로 추가
+//  - 빈 입력 칸에서 Backspace → 마지막 태그 삭제, 칩이 넘치면 다음 줄로 (높이는 CalcHeight)
+class CTagChipCtrl : public CWnd
+{
+public:
+	CSuggestEdit m_edit;                         // 새 태그 입력 (자동 완성)
+	std::function<void()> m_onChanged;           // 사용자가 태그를 추가/삭제함
+	std::function<void()> m_onDropDown;          // ⌄ 버튼
+	std::function<void()> m_onHeightChanged;     // 필요한 높이가 바뀜 (부모가 다시 배치)
+	// 칩 이름 뒤에 회색으로 붙일 글자 (예: 배우의 별칭). 비어 있으면 이름만
+	std::function<CString(const CString&)> m_subText;
+	// 칩에 보일 글자 (값과 다르게 보여 줄 때, 예: 배우 칩에 이 작품의 별칭). 비어 있으면 값 그대로
+	std::function<CString(const CString&)> m_displayText;
+	// 칩(× 제외)을 클릭함: (칩 번호, 화면 좌표)
+	std::function<void(int, CPoint)> m_onChipClick;
+	// 칩(× 제외)을 더블클릭함: (칩 번호) - 정해 두면 한 번 클릭은 더블클릭 시간만큼 기다렸다가 m_onChipClick
+	std::function<void(int)> m_onChipDblClick;
+	// 칩 위에 마우스가 올라감 / 벗어남: (칩 번호 - 없으면 -1, 칩 영역 화면 좌표)
+	std::function<void(int, const CRect&)> m_onChipHover;
+	// 칩 이름 왼쪽 아이콘 (예: 스튜디오 이미지): 높이 h 일 때 필요한 폭 (0 = 아이콘 없음) / 그리기
+	std::function<int(const CString&, int)> m_iconWidth;
+	std::function<void(CDC*, const CString&, const CRect&)> m_drawIcon;
+	// 칩마다 배경색 (예: 배우 역할 - 주연 · 조연), CLR_INVALID 또는 비어 있으면 기본 색
+	std::function<COLORREF(const CString&)> m_chipBackOf;
+	CString DisplayOf(const CString& tag) const;
+
+	bool Create(CWnd* parent, UINT id);
+	void SetColors(COLORREF back, COLORREF chipBack, COLORREF chipText, COLORREF icon, COLORREF text);
+	void SetTags(const std::vector<CString>& tags);   // 알림 없이 표시만 바꿈
+	const std::vector<CString>& Tags() const { return m_tags; }
+	int  CalcHeight(int width);                       // 이 폭에서 필요한 높이 (픽셀)
+	bool AddFromEdit();                               // 입력 칸의 글자를 태그로 추가
+	int  ChipAt(CPoint client) const;                 // 그 위치의 칩 번호 (없으면 -1, 클라이언트 좌표)
+
+protected:
+	std::vector<CString> m_tags;
+	std::vector<CRect>   m_chipRects;
+	std::vector<CRect>   m_xRects;
+	CRect m_clearRect, m_dropRect;
+	int   m_lastHeight = 0;
+	COLORREF m_back = TCOL(TC_EDIT);
+	COLORREF m_chipBack = TCOL(TC_LIGHT);
+	COLORREF m_chipText = TCOL(TC_DARK);
+	COLORREF m_icon = TCOL(TC_SUB);
+	COLORREF m_text = TCOL(TC_TEXT);
+	COLORREF m_subColor = TCOL(TC_BORDER);   // 칩 안 회색 글자
+	CBrush   m_backBrush;
+
+	int  DoLayout(int width, bool apply);
+	void TagsChanged(bool notify);
+	void RemoveAt(int index);
+
+	BOOL PreTranslateMessage(MSG* pMsg) override;
+	afx_msg void OnPaint();
+	afx_msg BOOL OnEraseBkgnd(CDC*) { return TRUE; }
+	afx_msg void OnSize(UINT nType, int cx, int cy);
+	afx_msg void OnLButtonDown(UINT nFlags, CPoint point);
+	afx_msg void OnLButtonDblClk(UINT nFlags, CPoint point);
+	afx_msg void OnTimer(UINT_PTR nIDEvent);
+	int    m_pendingClick = -1;   // 더블클릭을 기다리는 한 번 클릭 (칩 번호)
+	CPoint m_pendingPt;           // 그 칩의 화면 좌표 (메뉴 위치)
+	afx_msg void OnMouseMove(UINT nFlags, CPoint point);
+	afx_msg LRESULT OnMouseLeave(WPARAM, LPARAM);
+	int  m_hoverChip = -1;
+	int  m_hoverX = -1;        // 마우스가 올라간 칩 × (빨간 바탕으로 그림)
+	bool m_trackLeave = false;
+	void SetHoverChip(int index);
+	afx_msg BOOL OnSetCursor(CWnd* pWnd, UINT nHitTest, UINT message);
+	afx_msg void OnSetFocus(CWnd* pOldWnd);
+	afx_msg void OnEnable(BOOL bEnable);
+	afx_msg HBRUSH OnCtlColor(CDC* pDC, CWnd* pWnd, UINT nCtlColor);
+	afx_msg void OnEditKillFocus();
+	afx_msg LRESULT OnSetFontMsg(WPARAM wp, LPARAM lp);   // SetFont: 칩 · 입력 칸 글꼴 (부모와 다른 글꼴도 가능)
+	afx_msg LRESULT OnGetFontMsg(WPARAM, LPARAM);
+	HFONT m_hFont = nullptr;
+	DECLARE_MESSAGE_MAP()
+};
+
+// 장르(태그) 선택 칩 줄: [전체 XX건] [태그 N] [태그 N] ... (폭이 모자라면 다음 줄로)
+//  - 선택만 가능 (하나만): 칩을 누르면 그 태그, [전체] 를 누르면 해제 → m_onSelect (빈 문자열 = 전체)
+//  - 영상 탭 격자 머리 영역(도구줄 아래)에 놓임, 높이는 CalcHeight
+class CGenreChipBar : public CWnd
+{
+public:
+	struct Item { CString name; int count = 0; };
+	std::function<void(const CString&)> m_onSelect;
+
+	bool Create(CWnd* parent, UINT id);
+	// 칩 글꼴: 받은 글꼴의 굵은 꼴로 그리고 잼 (만들지 못하면 받은 글꼴 그대로)
+	void SetFontPtr(CFont* f)
+	{
+		m_boldFont.DeleteObject();
+		m_font = f;
+		LOGFONT lf = {};
+		if (f && f->GetLogFont(&lf))
+		{
+			lf.lfWeight = FW_BOLD;
+			if (m_boldFont.CreateFontIndirect(&lf))
+				m_font = &m_boldFont;
+		}
+	}
+	void SetItems(const std::vector<Item>& items, int total, const CString& selected);
+	int  CalcHeight(int width);   // 이 폭에서 필요한 높이 (픽셀)
+
+protected:
+	std::vector<Item>  m_items;    // 태그 칩 (전체 칩 제외)
+	std::vector<CRect> m_rects;    // [0] = 전체, [1..] = m_items
+	int     m_total = 0;
+	CString m_sel;
+	int     m_hot = -1;
+	bool    m_tracking = false;
+	CFont*  m_font = nullptr;
+	CFont   m_boldFont;   // m_font 가 가리키는 굵은 글꼴 (SetFontPtr)
+
+	CString ChipText(int i, CString& count) const;   // 칩 이름 · 건수 글자
+	int  DoLayout(CDC* dc, int width);
+	int  HitTest(CPoint pt) const;
+
+	afx_msg void OnPaint();
+	afx_msg BOOL OnEraseBkgnd(CDC*) { return TRUE; }
+	afx_msg void OnSize(UINT nType, int cx, int cy);
+	afx_msg void OnLButtonDown(UINT nFlags, CPoint point);
+	afx_msg void OnMouseMove(UINT nFlags, CPoint point);
+	afx_msg LRESULT OnMouseLeave(WPARAM, LPARAM);
+	afx_msg BOOL OnSetCursor(CWnd* pWnd, UINT nHitTest, UINT message);
+	DECLARE_MESSAGE_MAP()
+};

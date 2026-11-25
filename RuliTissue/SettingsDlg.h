@@ -1,0 +1,110 @@
+﻿#pragma once
+
+#include <functional>
+#include "DarkTheme.h"
+#include "VideoLibrary.h"
+#include "PluginHost.h"
+
+// ---------------------------------------------------------------------------
+// 테마 미리보기: 고른 테마의 색으로 화면 조각(카드 · 목록 · 입력 칸 · 칩 · 버튼)을 작게 그림 (적용은 다시 시작할 때)
+class CThemePreview : public CWnd
+{
+public:
+	bool Create(CWnd* parent, const CRect& rc, UINT id);
+	void SetTheme(int index) { m_index = index; if (GetSafeHwnd()) Invalidate(FALSE); }
+
+protected:
+	int m_index = 0;
+	afx_msg void OnPaint();
+	afx_msg BOOL OnEraseBkgnd(CDC*) { return TRUE; }
+	DECLARE_MESSAGE_MAP()
+};
+
+// ---------------------------------------------------------------------------
+// 설정 창 (메인 창 오른쪽 위 톱니바퀴 버튼)
+//  - DB 삭제: 영상 / 배우 / 스튜디오 / 태그 중 고른 것을 지움 (파일은 지우지 않음)
+class CSettingsDlg : public CDialogEx
+{
+public:
+	enum DbMask { DB_VIDEO = 1, DB_ACTOR = 2, DB_STUDIO = 4, DB_TAG = 8, DB_SERIES = 16 };   // SERIES = 품번 DB
+
+	CSettingsDlg(const CVideoLibrary& lib, CWnd* pParent = nullptr);
+
+	// [선택한 DB 삭제] 확인 후 호출 (메인 창이 실제로 지우고 화면 갱신)
+	std::function<void(int mask)> m_onDeleteDb;
+	// [텍스트 내보내기 / 가져오기] (what: CVideoLibrary::EXPORT_ACTORS / STUDIOS / TAGS) - 메인 창이 파일 고르기 · 처리 · 화면 갱신
+	std::function<void(int what)> m_onExportList;
+	std::function<void()> m_onMakePreviews;   // [DB 관리] 미리보기 일괄 만들기 (미리보기가 없는 영상만)
+	std::function<void()> m_onDeletePreviews; // [DB 관리] 미리보기 모두 삭제
+	std::function<void()> m_onCleanPreviews;  // [DB 관리] 끊긴 것 정리 (어느 영상에도 연결되지 않은 미리보기 파일 삭제)
+	std::function<void()> m_onRegenPreviews;  // [DB 관리] 미리보기 재생성 (이미 있는 것도 다시)
+	std::function<void()> m_onStopPreviews;   // [DB 관리] 미리보기 만들기 중단
+	std::function<bool()> m_isPreviewBusy;    // 미리보기를 만드는 중인지 ([만들기 중단] 활성 - 0.3초마다 확인)
+	std::function<void(int what)> m_onImportList;
+
+	// [표시] 영상 카드 해상도 · 재생 시간 (DoModal 전에 지금 값, IDOK 후 고른 값)
+	bool m_cardMedia = true;
+	bool m_sfw = false;   // SFW: 배우 · 영상 이미지 모자이크
+	bool m_mergeParts = false;   // 분할 영상 합쳐서 보기 (격자에 첫 파트 카드 하나만)
+	int  m_ratingMode = 0;       // 별점 체계: 0 = 1점 · 5점 만점, 1 = 0.5점 · 5점 만점, 2 = 1점 · 10점 만점
+	int  m_censorLang = 0;       // 검열 정보 표시 언어: 0 한글, 1 영어, 2 일본어
+	bool m_detailLeft = false;   // 상세 화면 위치: false = 오른쪽, true = 왼쪽
+	int  m_detailStrip = 0;  // [영상 상세 태그 아래] 0 = 출연 배우 카드, 1 = 영상 스크린샷
+	int  m_shotCols = 3;     // 영상 스크린샷 가로 배치 수 (1 ~ 10)
+	int  m_themeIndex = 0;   // [테마] 고른 테마 번호 (Theme::Name, 다시 시작하면 적용)
+	int  m_startPage = -1;   // 처음 보일 탭 (-1 = 마지막으로 본 탭, 4 = [플러그인])
+
+#ifdef AFX_DESIGN_TIME
+	enum { IDD = IDD_SETTINGS };
+#endif
+
+protected:
+	virtual BOOL OnInitDialog();
+	virtual void OnOK();
+
+	const CVideoLibrary& m_lib;
+	CDarkDialogTheme m_theme;   // 메인 창과 같은 어두운 색상
+
+	void UpdateCounts();        // 체크박스 글자에 개수 표시
+	// 탭: [표시] [상세 화면] [테마] [DB 관리] [플러그인] - 리소스에서 페이지마다 x 400 DLU 씩 떨어뜨려 둔 컨트롤을 첫 페이지 자리로 옮기고 탭마다 보이기 / 숨기기
+	static const int kPages = 6;   // [플레이어] 탭은 리소스 x 2000 대 (페이지 5), 탭 버튼은 [상세 화면] 오른쪽
+	CDarkButton m_tabs[kPages];
+	std::vector<std::pair<HWND, int>> m_pageCtrls;   // (컨트롤, 페이지 번호)
+	int  m_page = 0;
+	void ShowPage(int page);
+	void PageOfCtrl(UINT id);   // 그 컨트롤이 있는 페이지로 (확인 때 잘못된 값으로 포커스 옮길 때)
+	afx_msg void OnTab1() { ShowPage(0); }
+	afx_msg void OnTab2() { ShowPage(1); }
+	afx_msg void OnTab3() { ShowPage(2); }
+	afx_msg void OnTab4() { ShowPage(3); }
+	afx_msg void OnTab5() { ShowPage(4); }
+	afx_msg void OnTab6() { ShowPage(5); }
+	// [플러그인] 탭: plugins 폴더의 플러그인 목록 (체크 = 사용, 확인을 누르면 저장)
+	CListCtrl m_pluginList;
+	std::vector<PluginInfo> m_plugins;
+	bool m_pluginFilling = false;
+	void FillPlugins();
+	void UpdatePluginDesc();
+	afx_msg void OnPluginItemChanged(NMHDR* pNMHDR, LRESULT* pResult);
+	afx_msg void OnBnClickedPluginFolder();
+	afx_msg void OnBnClickedPluginReload();
+	afx_msg void OnBnClickedPluginHelp();
+	CThemePreview m_themePreview;   // [테마] 고른 색 미리보기
+	afx_msg void OnThemeChanged();  // 테마 콤보 → 미리보기 갱신
+	afx_msg void OnBnClickedDeleteDb();
+	afx_msg void OnBnClickedExportList();
+	afx_msg void OnBnClickedImportList();
+	afx_msg void OnBnClickedMakePreviews() { if (m_onMakePreviews) m_onMakePreviews(); UpdatePreviewButtons(); }
+	afx_msg void OnBnClickedDeletePreviews() { if (m_onDeletePreviews) m_onDeletePreviews(); }
+	afx_msg void OnBnClickedCleanPreviews() { if (m_onCleanPreviews) m_onCleanPreviews(); }
+	afx_msg void OnBnClickedRegenPreviews() { if (m_onRegenPreviews) m_onRegenPreviews(); UpdatePreviewButtons(); }
+	afx_msg void OnBnClickedStopPreviews() { if (m_onStopPreviews) m_onStopPreviews(); UpdatePreviewButtons(); }
+	afx_msg void OnPlayerBuiltin();        // [내장 플레이어 사용] 체크: libmpv-2.dll 이 없으면 안내하고 체크를 풂
+	afx_msg void UpdatePreviewQuality();   // 미리보기 품질 라디오 → [소리 포함] 활성 상태
+	void UpdatePreviewButtons();
+	afx_msg void OnTimer(UINT_PTR nIDEvent);
+	int  SelectedIoKind();
+	afx_msg void OnCheckChanged();
+	afx_msg HBRUSH OnCtlColor(CDC* pDC, CWnd* pWnd, UINT nCtlColor);
+	DECLARE_MESSAGE_MAP()
+};

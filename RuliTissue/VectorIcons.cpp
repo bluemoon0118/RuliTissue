@@ -1,0 +1,1128 @@
+﻿#include "pch.h"
+#include "VectorIcons.h"
+#include <cmath>
+
+#pragma comment(lib, "gdiplus.lib")
+
+#ifdef _DEBUG
+#define new DEBUG_NEW
+#endif
+
+namespace
+{
+	void EnsureGdiPlus()
+	{
+		static ULONG_PTR token = 0;
+		if (!token)
+		{
+			Gdiplus::GdiplusStartupInput input;
+			Gdiplus::GdiplusStartup(&token, &input, nullptr);
+		}
+	}
+
+	// area 안에 24x24 설계 좌표를 맞추는 변환을 건 Graphics 로 그리기
+	template <typename F>
+	void Paint(CDC* dc, const CRect& area, double fill, COLORREF col, F build)
+	{
+		if (area.IsRectEmpty())
+			return;
+		EnsureGdiPlus();
+		const double side = (std::min)(area.Width(), area.Height()) * fill;
+		const double scale = side / 24.0;
+		const double x = area.left + (area.Width() - side) / 2.0;
+		const double y = area.top + (area.Height() - side) / 2.0;
+
+		Gdiplus::Graphics g(dc->GetSafeHdc());
+		g.SetSmoothingMode(Gdiplus::SmoothingModeAntiAlias);
+		g.SetPixelOffsetMode(Gdiplus::PixelOffsetModeHighQuality);
+		g.TranslateTransform(static_cast<Gdiplus::REAL>(x), static_cast<Gdiplus::REAL>(y));
+		g.ScaleTransform(static_cast<Gdiplus::REAL>(scale), static_cast<Gdiplus::REAL>(scale));
+
+		Gdiplus::GraphicsPath path(Gdiplus::FillModeAlternate);   // 겹친 도형은 구멍이 됨
+		build(path);
+		Gdiplus::SolidBrush brush(Gdiplus::Color(255, GetRValue(col), GetGValue(col), GetBValue(col)));
+		g.FillPath(&brush, &path);
+	}
+
+	void AddRoundRect(Gdiplus::GraphicsPath& p, float x, float y, float w, float h, float r)
+	{
+		const float d = r * 2;
+		p.StartFigure();
+		p.AddArc(x, y, d, d, 180.0f, 90.0f);
+		p.AddArc(x + w - d, y, d, d, 270.0f, 90.0f);
+		p.AddArc(x + w - d, y + h - d, d, d, 0.0f, 90.0f);
+		p.AddArc(x, y + h - d, d, d, 90.0f, 90.0f);
+		p.CloseFigure();
+	}
+}
+
+namespace VectorIcon
+{
+	void Camera(CDC* dc, const CRect& area, COLORREF col, double fill)
+	{
+		Paint(dc, area, fill, col, [](Gdiplus::GraphicsPath& p)
+		{
+			// 비디오 카메라 (Font Awesome 6 "video" solid, CC BY 4.0) — 원본 SVG 경로를 24x24 설계 좌표로 옮긴 것
+			AddRoundRect(p, 1.000f, 4.667f, 14.667f, 14.667f, 2.444f);   // 몸체 (둥근 정사각형)
+			p.StartFigure();                                                   // 렌즈 (오른쪽 사다리꼴)
+			p.AddBezier(22.355f, 6.034f, 22.752f, 6.248f, 23.000f, 6.660f, 23.000f, 7.111f);
+			p.AddLine(23.000f, 7.111f, 23.000f, 16.889f);
+			p.AddBezier(23.000f, 16.889f, 23.000f, 17.340f, 22.752f, 17.752f, 22.355f, 17.966f);
+			p.AddBezier(22.355f, 17.966f, 21.957f, 18.180f, 21.476f, 18.157f, 21.098f, 17.905f);
+			p.AddLine(21.098f, 17.905f, 17.431f, 15.460f);
+			p.AddLine(17.431f, 15.460f, 16.889f, 15.098f);
+			p.AddLine(16.889f, 15.098f, 16.889f, 8.902f);
+			p.AddLine(16.889f, 8.902f, 17.431f, 8.540f);
+			p.AddLine(17.431f, 8.540f, 21.098f, 6.095f);
+			p.AddBezier(21.098f, 6.095f, 21.472f, 5.847f, 21.953f, 5.820f, 22.355f, 6.034f);
+			p.CloseFigure();
+		});
+	}
+
+	void Tag(CDC* dc, const CRect& area, COLORREF col, double fill)
+	{
+		Paint(dc, area, fill, col, [](Gdiplus::GraphicsPath& p)
+		{
+			// 왼쪽이 뾰족한 꼬리표 + 구멍 (Font Awesome 6 "tag" solid 를 90도 돌린 모양, CC BY 4.0)
+			// 원본 SVG 경로를 24x24 설계 좌표로 옮긴 것
+			const float r = 1.956f, d = r * 2;
+			p.StartFigure();
+			p.AddLine(7.453f, 19.263f, 1.572f, 13.383f);
+			p.AddBezier(1.572f, 13.383f, 0.809f, 12.619f, 0.809f, 11.381f, 1.572f, 10.617f);
+			p.AddLine(1.572f, 10.617f, 7.453f, 4.737f);
+			p.AddArc(8.836f - r, 6.119f - r, d, d, 225.0f, 45.0f);
+			p.AddLine(8.836f, 4.164f, 21.044f, 4.164f);
+			p.AddBezier(21.044f, 4.164f, 22.124f, 4.164f, 22.999f, 5.040f, 22.999f, 6.120f);
+			p.AddLine(22.999f, 6.120f, 22.999f, 17.881f);
+			p.AddBezier(22.999f, 17.881f, 22.999f, 18.961f, 22.124f, 19.836f, 21.044f, 19.836f);
+			p.AddLine(21.044f, 19.836f, 8.836f, 19.836f);
+			p.AddArc(8.836f - r, 17.881f - r, d, d, 90.0f, 45.0f);
+			p.CloseFigure();
+			p.AddEllipse(6.643f - r, 12.000f - r, d, d);   // 구멍
+		});
+	}
+
+	void Collection(CDC* dc, const CRect& area, COLORREF col, double fill)
+	{
+		Paint(dc, area, fill, col, [](Gdiplus::GraphicsPath& p)
+		{
+			// 필름 (Font Awesome "film" 과 비슷한 모양): 둥근 사각형 몸체 + 양옆 구멍(4개씩) + 가운데 화면 2칸 - 구멍 · 화면은 뚫림
+			auto roundRect = [&p](float x, float y, float w, float h, float r)
+			{
+				const float d = r * 2;
+				p.StartFigure();
+				p.AddArc(x, y, d, d, 180.0f, 90.0f);
+				p.AddArc(x + w - d, y, d, d, 270.0f, 90.0f);
+				p.AddArc(x + w - d, y + h - d, d, d, 0.0f, 90.0f);
+				p.AddArc(x, y + h - d, d, d, 90.0f, 90.0f);
+				p.CloseFigure();
+			};
+			roundRect(1.0f, 2.5f, 22.0f, 19.0f, 2.2f);           // 몸체
+			const float holeW = 2.4f, holeH = 2.4f, holeR = 0.5f;
+			const float holeY[4] = { 4.6f, 8.6f, 12.6f, 16.6f };  // 구멍 세로 위치 (위에서 아래로 4개)
+			for (float hy : holeY)
+			{
+				roundRect(2.6f, hy, holeW, holeH, holeR);               // 왼쪽 구멍
+				roundRect(23.0f - 1.6f - holeW, hy, holeW, holeH, holeR);   // 오른쪽 구멍
+			}
+			roundRect(6.9f, 4.6f, 10.2f, 6.4f, 0.8f);    // 위 화면
+			roundRect(6.9f, 12.6f, 10.2f, 6.4f, 0.8f);   // 아래 화면 (구멍 줄과 위아래 끝을 맞춤)
+		});
+	}
+
+	// 폴더 외곽 (탭이 왼쪽 위에 붙은 한 덩어리 - 겹치는 도형이 없어 구멍이 생기지 않음)
+	void AddFolderShape(Gdiplus::GraphicsPath& p)
+	{
+		const float r = 1.6f, d = r * 2;
+		p.StartFigure();
+		p.AddArc(1.0f, 3.0f, d, d, 180.0f, 90.0f);              // 탭 왼쪽 위
+		p.AddLine(1.0f + r, 3.0f, 8.2f, 3.0f);
+		p.AddLine(8.2f, 3.0f, 10.4f, 5.6f);                      // 탭 비스듬한 끝
+		p.AddLine(10.4f, 5.6f, 23.0f - r, 5.6f);
+		p.AddArc(23.0f - d, 5.6f, d, d, 270.0f, 90.0f);         // 오른쪽 위
+		p.AddArc(23.0f - d, 21.0f - d, d, d, 0.0f, 90.0f);      // 오른쪽 아래
+		p.AddArc(1.0f, 21.0f - d, d, d, 90.0f, 90.0f);          // 왼쪽 아래
+		p.CloseFigure();
+	}
+
+	void FolderPlay(CDC* dc, const CRect& area, COLORREF col, double fill)
+	{
+		Paint(dc, area, fill, col, [](Gdiplus::GraphicsPath& p)
+		{
+			AddFolderShape(p);
+			p.StartFigure();                                         // 재생 삼각형 (구멍)
+			p.AddLine(9.6f, 9.0f, 9.6f, 17.6f);
+			p.AddLine(9.6f, 17.6f, 16.6f, 13.3f);
+			p.CloseFigure();
+		});
+	}
+
+	void FolderWarn(CDC* dc, const CRect& area, COLORREF col, double fill)
+	{
+		Paint(dc, area, fill, col, [](Gdiplus::GraphicsPath& p)
+		{
+			AddFolderShape(p);
+			AddRoundRect(p, 10.9f, 8.0f, 2.2f, 7.0f, 1.0f);          // 느낌표 막대 (구멍)
+			p.AddEllipse(10.75f, 16.2f, 2.5f, 2.5f);                 // 느낌표 점 (구멍)
+		});
+	}
+
+	void UsbDrive(CDC* dc, const CRect& area, COLORREF col, double fill)
+	{
+		Paint(dc, area, fill, col, [](Gdiplus::GraphicsPath& p)
+		{
+			// 커넥터(위) + 몸체(아래) - 맞닿기만 하고 겹치지 않게
+			p.StartFigure();
+			p.AddLine(8.6f, 1.5f, 15.4f, 1.5f);
+			p.AddLine(15.4f, 1.5f, 15.4f, 8.0f);
+			p.AddLine(15.4f, 8.0f, 8.6f, 8.0f);
+			p.CloseFigure();
+			AddRoundRect(p, 10.0f, 3.2f, 1.5f, 1.9f, 0.3f);          // 커넥터 구멍 2개
+			AddRoundRect(p, 12.5f, 3.2f, 1.5f, 1.9f, 0.3f);
+			const float r = 2.2f, d = r * 2;                         // 몸체 (위쪽은 각지게 커넥터에 붙음)
+			p.StartFigure();
+			p.AddLine(6.4f, 8.0f, 17.6f, 8.0f);
+			p.AddArc(17.6f - d, 22.5f - d, d, d, 0.0f, 90.0f);
+			p.AddArc(6.4f, 22.5f - d, d, d, 90.0f, 90.0f);
+			p.CloseFigure();
+			AddRoundRect(p, 10.6f, 17.6f, 2.8f, 2.6f, 0.6f);          // 표시등 (구멍)
+		});
+	}
+
+	void Person(CDC* dc, const CRect& area, COLORREF col, double fill)
+	{
+		Paint(dc, area, fill, col, [](Gdiplus::GraphicsPath& p)
+		{
+			p.AddEllipse(7.2f, 2.0f, 9.6f, 9.6f);                         // 머리
+			p.StartFigure();
+			p.AddArc(3.0f, 13.0f, 18.0f, 18.0f, 180.0f, 180.0f);                // 어깨 (위쪽 반원)
+			p.CloseFigure();
+		});
+	}
+
+	void User(CDC* dc, const CRect& area, COLORREF col, double fill)
+	{
+		Paint(dc, area, fill, col, [](Gdiplus::GraphicsPath& p)
+		{
+			// 사람 (Font Awesome 6 "user" solid, CC BY 4.0) — 원본 SVG(448x512) 경로를 24x24 설계 좌표로 옮긴 것
+			p.AddEllipse(6.500f, 1.000f, 11.000f, 11.000f);   // 머리
+			p.StartFigure();                                                   // 몸
+			p.AddBezier(10.036f, 14.062f, 5.804f, 14.062f, 2.375f, 17.491f, 2.375f, 21.724f);
+			p.AddBezier(2.375f, 21.724f, 2.375f, 22.429f, 2.946f, 23.000f, 3.651f, 23.000f);
+			p.AddLine(3.651f, 23.000f, 20.349f, 23.000f);
+			p.AddBezier(20.349f, 23.000f, 21.054f, 23.000f, 21.625f, 22.429f, 21.625f, 21.724f);
+			p.AddBezier(21.625f, 21.724f, 21.625f, 17.491f, 18.196f, 14.062f, 13.964f, 14.062f);
+			p.AddLine(13.964f, 14.062f, 10.036f, 14.062f);
+			p.CloseFigure();
+		});
+	}
+
+	void Movie(CDC* dc, const CRect& area, COLORREF col, double fill)
+	{
+		Paint(dc, area, fill, col, [](Gdiplus::GraphicsPath& p)
+		{
+			// 원 + 재생 삼각형 구멍 (Font Awesome 6 "circle-play" solid, CC BY 4.0)
+			// 원본 SVG(512x512) 경로를 24x24 설계 좌표로 옮긴 것
+			p.AddEllipse(1.0f, 1.0f, 22.0f, 22.0f);
+			p.StartFigure();
+			p.AddBezier(9.091f, 7.321f, 8.764f, 7.501f, 8.562f, 7.849f, 8.562f, 8.219f);
+			p.AddLine(8.562f, 8.219f, 8.562f, 15.781f);
+			p.AddBezier(8.562f, 15.781f, 8.562f, 16.155f, 8.764f, 16.499f, 9.091f, 16.679f);
+			p.AddBezier(9.091f, 16.679f, 9.418f, 16.860f, 9.813f, 16.855f, 10.135f, 16.658f);
+			p.AddLine(10.135f, 16.658f, 16.323f, 12.877f);
+			p.AddBezier(16.323f, 12.877f, 16.628f, 12.688f, 16.817f, 12.357f, 16.817f, 11.996f);
+			p.AddBezier(16.817f, 11.996f, 16.817f, 11.635f, 16.628f, 11.304f, 16.323f, 11.115f);
+			p.AddLine(16.323f, 11.115f, 10.135f, 7.334f);
+			p.AddBezier(10.135f, 7.334f, 9.817f, 7.140f, 9.418f, 7.132f, 9.091f, 7.312f);
+			p.CloseFigure();
+		});
+	}
+
+	void PlayCircle(CDC* dc, const CRect& area, COLORREF col, double fill)
+	{
+		Paint(dc, area, fill, col, [](Gdiplus::GraphicsPath& p)
+		{
+			p.AddEllipse(1.5f, 1.5f, 21.0f, 21.0f);
+			Gdiplus::PointF play[3] = { { 9.6f, 7.4f }, { 16.6f, 12.0f }, { 9.6f, 16.6f } };
+			p.StartFigure();
+			p.AddPolygon(play, 3);                                        // 재생 (구멍)
+		});
+	}
+
+	void Copy(CDC* dc, const CRect& area, COLORREF col, double fill)
+	{
+		// 뒤 장: 테두리만 (왼쪽 위), 앞 장: 꽉 찬 둥근 사각형 (오른쪽 아래) - 따로 칠해 겹친 곳이 구멍 나지 않게
+		Paint(dc, area, fill, col, [](Gdiplus::GraphicsPath& p)
+		{
+			AddRoundRect(p, 2.5f, 2.5f, 13.0f, 13.0f, 2.2f);
+			AddRoundRect(p, 4.6f, 4.6f, 8.8f, 8.8f, 1.0f);   // 안쪽 (구멍)
+		});
+		Paint(dc, area, fill, col, [](Gdiplus::GraphicsPath& p)
+		{
+			AddRoundRect(p, 8.5f, 8.5f, 13.0f, 13.0f, 2.2f);
+		});
+	}
+
+	// --- 메뉴 아이콘 (24x24 설계, 겹친 도형은 구멍 - 따로 칠할 부분은 Paint 를 나눠 부름) ---
+
+	void Trash(CDC* dc, const CRect& area, COLORREF col, double fill)
+	{
+		Paint(dc, area, fill, col, [](Gdiplus::GraphicsPath& p)
+		{
+			AddRoundRect(p, 9.0f, 1.8f, 6.0f, 2.4f, 0.8f);        // 손잡이
+			AddRoundRect(p, 3.5f, 4.6f, 17.0f, 2.6f, 1.0f);       // 뚜껑
+			p.StartFigure();                                        // 몸통 (아래가 좁은 사다리꼴)
+			p.AddLine(5.2f, 8.4f, 18.8f, 8.4f);
+			p.AddLine(18.8f, 8.4f, 17.6f, 21.0f);
+			p.AddLine(17.6f, 21.0f, 6.4f, 21.0f);
+			p.CloseFigure();
+			AddRoundRect(p, 8.6f, 11.0f, 1.8f, 7.4f, 0.9f);       // 홈 (구멍)
+			AddRoundRect(p, 13.6f, 11.0f, 1.8f, 7.4f, 0.9f);
+		});
+	}
+
+	void MinusCircle(CDC* dc, const CRect& area, COLORREF col, double fill)
+	{
+		Paint(dc, area, fill, col, [](Gdiplus::GraphicsPath& p)
+		{
+			p.AddEllipse(2.0f, 2.0f, 20.0f, 20.0f);
+			AddRoundRect(p, 6.5f, 10.6f, 11.0f, 2.8f, 1.2f);      // 빼기 (구멍)
+		});
+	}
+
+	void PlusCircle(CDC* dc, const CRect& area, COLORREF col, double fill)
+	{
+		Paint(dc, area, fill, col, [](Gdiplus::GraphicsPath& p)
+		{
+			p.AddEllipse(2.0f, 2.0f, 20.0f, 20.0f);
+			// 더하기 (구멍) - 가로 · 세로 막대를 한 도형으로 (겹치면 가운데가 다시 채워지므로)
+			const float a = 6.5f, b = 10.6f, c = 13.4f, d = 17.5f;
+			const Gdiplus::PointF pts[12] = {
+				{ b, a }, { c, a }, { c, b }, { d, b }, { d, c }, { c, c },
+				{ c, d }, { b, d }, { b, c }, { a, c }, { a, b }, { b, b } };
+			p.AddPolygon(pts, 12);
+		});
+	}
+
+	void Pencil(CDC* dc, const CRect& area, COLORREF col, double fill)
+	{
+		Paint(dc, area, fill, col, [](Gdiplus::GraphicsPath& p)
+		{
+			const Gdiplus::PointF body[5] = { { 3.0f, 21.0f }, { 4.4f, 15.6f }, { 15.2f, 4.8f }, { 19.2f, 8.8f }, { 8.4f, 19.6f } };
+			p.AddPolygon(body, 5);                                  // 몸통 + 촉
+			const Gdiplus::PointF cap[4] = { { 16.4f, 3.6f }, { 18.0f, 2.0f }, { 22.0f, 6.0f }, { 20.4f, 7.6f } };
+			p.AddPolygon(cap, 4);                                   // 지우개 쪽 (몸통과 떨어짐)
+		});
+	}
+
+	void Refresh(CDC* dc, const CRect& area, COLORREF col, double fill)
+	{
+		Paint(dc, area, fill, col, [](Gdiplus::GraphicsPath& p)
+		{
+			// 고리 (330° 에서 시계 반대 방향으로 280° - 50° 까지), 끝에 화살촉
+			p.StartFigure();
+			p.AddArc(3.0f, 3.0f, 18.0f, 18.0f, 330.0f, -280.0f);
+			p.AddArc(6.0f, 6.0f, 12.0f, 12.0f, 50.0f, 280.0f);
+			p.CloseFigure();
+			const float c = 12.0f;
+			const float cs = 0.8660254f, sn = -0.5f;                // cos / sin(-30°)
+			const Gdiplus::PointF head[3] = {
+				{ c + 11.3f * cs, c + 11.3f * sn },                 // 바깥
+				{ c + 3.7f * cs, c + 3.7f * sn },                   // 안쪽
+				{ c + 7.5f * cs + 4.6f * 0.5f, c + 7.5f * sn + 4.6f * 0.8660254f } };   // 끝 (시계 방향)
+			p.AddPolygon(head, 3);
+		});
+	}
+
+	void Folder(CDC* dc, const CRect& area, COLORREF col, double fill)
+	{
+		Paint(dc, area, fill, col, [](Gdiplus::GraphicsPath& p) { AddFolderShape(p); });
+	}
+
+	void Play(CDC* dc, const CRect& area, COLORREF col, double fill)
+	{
+		Paint(dc, area, fill, col, [](Gdiplus::GraphicsPath& p)
+		{
+			const Gdiplus::PointF tri[3] = { { 6.5f, 3.5f }, { 20.0f, 12.0f }, { 6.5f, 20.5f } };
+			p.AddPolygon(tri, 3);
+		});
+	}
+
+	void Paste(CDC* dc, const CRect& area, COLORREF col, double fill)
+	{
+		Paint(dc, area, fill, col, [](Gdiplus::GraphicsPath& p)
+		{
+			AddRoundRect(p, 4.0f, 4.0f, 16.0f, 18.5f, 2.2f);      // 판
+			AddRoundRect(p, 6.4f, 8.4f, 11.2f, 11.8f, 0.8f);      // 안쪽 (구멍)
+		});
+		Paint(dc, area, fill, col, [](Gdiplus::GraphicsPath& p)
+		{
+			AddRoundRect(p, 8.3f, 1.8f, 7.4f, 4.8f, 1.2f);        // 집게 (판 위에 따로 칠함)
+		});
+	}
+
+	void TextDoc(CDC* dc, const CRect& area, COLORREF col, double fill)
+	{
+		Paint(dc, area, fill, col, [](Gdiplus::GraphicsPath& p)
+		{
+			AddRoundRect(p, 4.5f, 2.0f, 15.0f, 20.0f, 2.2f);      // 종이
+			AddRoundRect(p, 7.5f, 6.6f, 9.0f, 1.8f, 0.9f);        // 글 줄 (구멍)
+			AddRoundRect(p, 7.5f, 10.6f, 9.0f, 1.8f, 0.9f);
+			AddRoundRect(p, 7.5f, 14.6f, 6.0f, 1.8f, 0.9f);
+		});
+	}
+
+	void Picture(CDC* dc, const CRect& area, COLORREF col, double fill)
+	{
+		Paint(dc, area, fill, col, [](Gdiplus::GraphicsPath& p)
+		{
+			AddRoundRect(p, 2.0f, 4.0f, 20.0f, 16.0f, 2.2f);      // 틀
+			AddRoundRect(p, 4.2f, 6.2f, 15.6f, 11.6f, 0.8f);      // 안쪽 (구멍)
+		});
+		Paint(dc, area, fill, col, [](Gdiplus::GraphicsPath& p)
+		{
+			const Gdiplus::PointF hill[5] = { { 5.4f, 16.6f }, { 10.0f, 10.6f }, { 13.4f, 14.6f }, { 15.4f, 12.4f }, { 18.6f, 16.6f } };
+			p.AddPolygon(hill, 5);                                  // 산 (안쪽에 따로)
+			p.AddEllipse(14.2f, 7.6f, 3.0f, 3.0f);                  // 해
+		});
+	}
+
+	void Merge(CDC* dc, const CRect& area, COLORREF col, double fill)
+	{
+		Paint(dc, area, fill, col, [](Gdiplus::GraphicsPath& p)
+		{
+			p.AddEllipse(1.5f, 5.0f, 14.0f, 14.0f);                 // 겹친 곳은 구멍 (합쳐지는 모양)
+			p.AddEllipse(8.5f, 5.0f, 14.0f, 14.0f);
+		});
+	}
+
+	void Eraser(CDC* dc, const CRect& area, COLORREF col, double fill)
+	{
+		Paint(dc, area, fill, col, [](Gdiplus::GraphicsPath& p)
+		{
+			const Gdiplus::PointF body[4] = { { 9.6f, 3.4f }, { 20.6f, 14.4f }, { 14.6f, 20.4f }, { 3.6f, 9.4f } };
+			p.AddPolygon(body, 4);
+			const Gdiplus::PointF band[4] = { { 9.4f, 10.4f }, { 13.6f, 14.6f }, { 12.6f, 15.6f }, { 8.4f, 11.4f } };
+			p.AddPolygon(band, 4);                                  // 띠 (구멍)
+			AddRoundRect(p, 3.0f, 21.0f, 18.0f, 1.6f, 0.8f);      // 바닥 선
+		});
+	}
+
+	void CheckOn(CDC* dc, const CRect& area, COLORREF col, double fill)
+	{
+		Paint(dc, area, fill, col, [](Gdiplus::GraphicsPath& p)
+		{
+			AddRoundRect(p, 3.0f, 3.0f, 18.0f, 18.0f, 3.2f);
+			const Gdiplus::PointF mark[6] = { { 6.6f, 12.2f }, { 8.4f, 10.4f }, { 10.6f, 12.6f }, { 15.8f, 7.4f }, { 17.6f, 9.2f }, { 10.6f, 16.2f } };
+			p.AddPolygon(mark, 6);                                  // 체크 (구멍)
+		});
+	}
+
+	void CheckOff(CDC* dc, const CRect& area, COLORREF col, double fill)
+	{
+		Paint(dc, area, fill, col, [](Gdiplus::GraphicsPath& p)
+		{
+			AddRoundRect(p, 3.0f, 3.0f, 18.0f, 18.0f, 3.2f);
+			AddRoundRect(p, 5.2f, 5.2f, 13.6f, 13.6f, 1.6f);      // 안쪽 (구멍)
+		});
+	}
+
+	// --- 성별 기호 (고리 + 십자 / 화살표, 닿기만 하고 겹치지 않게 - 겹치면 구멍) ---
+	namespace
+	{
+		void AddRing(Gdiplus::GraphicsPath& p, float cx, float cy, float ro, float ri)
+		{
+			p.AddEllipse(cx - ro, cy - ro, ro * 2, ro * 2);
+			p.AddEllipse(cx - ri, cy - ri, ri * 2, ri * 2);   // 안쪽 (구멍)
+		}
+		// 십자 (세로 x0~x1 · y0~y2, 가로 y1a~y1b · xa~xb) 를 한 도형으로
+		void AddCross(Gdiplus::GraphicsPath& p, float x0, float x1, float y0, float y2, float xa, float xb, float ya, float yb)
+		{
+			const Gdiplus::PointF pts[12] = {
+				{ x0, y0 }, { x1, y0 }, { x1, ya }, { xb, ya }, { xb, yb }, { x1, yb },
+				{ x1, y2 }, { x0, y2 }, { x0, yb }, { xa, yb }, { xa, ya }, { x0, ya } };
+			p.AddPolygon(pts, 12);
+		}
+		// 오른쪽 위 45° 화살표: 몸통 (x+y = sum 위, sx → ex) + 직각 화살촉 (끝 tx, ty, 다리 길이 leg)
+		void AddArrowNE(Gdiplus::GraphicsPath& p, float sum, float sx, float ex, float half, float tx, float ty, float leg)
+		{
+			const Gdiplus::PointF body[4] = {
+				{ sx + half, sum - sx + half }, { sx - half, sum - sx - half },
+				{ ex - half, sum - ex - half }, { ex + half, sum - ex + half } };
+			p.AddPolygon(body, 4);
+			const Gdiplus::PointF head[3] = { { tx, ty }, { tx, ty + leg }, { tx - leg, ty } };
+			p.AddPolygon(head, 3);
+		}
+	}
+
+	void ViewGrid(CDC* dc, const CRect& area, COLORREF col, double fill)
+	{
+		Paint(dc, area, fill, col, [](Gdiplus::GraphicsPath& p)
+		{
+			AddRoundRect(p, 2.0f, 4.5f, 9.2f, 6.6f, 1.3f);
+			AddRoundRect(p, 12.8f, 4.5f, 9.2f, 6.6f, 1.3f);
+			AddRoundRect(p, 2.0f, 12.9f, 9.2f, 6.6f, 1.3f);
+			AddRoundRect(p, 12.8f, 12.9f, 9.2f, 6.6f, 1.3f);
+		});
+	}
+
+	void ViewList(CDC* dc, const CRect& area, COLORREF col, double fill)
+	{
+		Paint(dc, area, fill, col, [](Gdiplus::GraphicsPath& p)
+		{
+			for (int i = 0; i < 3; ++i)
+			{
+				const float y = 3.5f + i * 6.2f;
+				AddRoundRect(p, 2.0f, y, 6.0f, 4.6f, 1.0f);          // 썸네일
+				AddRoundRect(p, 10.0f, y + 1.15f, 12.0f, 2.3f, 1.1f);  // 줄
+			}
+		});
+	}
+
+	namespace
+	{
+		// 장르 꼬리표: 왼쪽 네모 + 오른쪽 뾰족 + 왼쪽 구멍 (24x24 설계)
+		void AddGenreTag(Gdiplus::GraphicsPath& p)
+		{
+			const Gdiplus::PointF pts[5] = { { 3.0f, 5.0f }, { 12.5f, 5.0f }, { 21.0f, 12.0f }, { 12.5f, 19.0f }, { 3.0f, 19.0f } };
+			p.AddPolygon(pts, 5);
+			p.AddEllipse(7.6f - 2.0f, 12.0f - 2.0f, 4.0f, 4.0f);   // 구멍
+		}
+	}
+
+	void GenreTag(CDC* dc, const CRect& area, COLORREF col, double fill)
+	{
+		Paint(dc, area, fill, col, [](Gdiplus::GraphicsPath& p) { AddGenreTag(p); });
+	}
+
+	void GenreTagOff(CDC* dc, const CRect& area, COLORREF col, double fill)
+	{
+		if (area.IsRectEmpty())
+			return;
+		EnsureGdiPlus();
+		const double side = (std::min)(area.Width(), area.Height()) * fill;
+		const double scale = side / 24.0;
+		const double x = area.left + (area.Width() - side) / 2.0;
+		const double y = area.top + (area.Height() - side) / 2.0;
+
+		Gdiplus::Graphics g(dc->GetSafeHdc());
+		g.SetSmoothingMode(Gdiplus::SmoothingModeAntiAlias);
+		g.SetPixelOffsetMode(Gdiplus::PixelOffsetModeHighQuality);
+		g.TranslateTransform(static_cast<Gdiplus::REAL>(x), static_cast<Gdiplus::REAL>(y));
+		g.ScaleTransform(static_cast<Gdiplus::REAL>(scale), static_cast<Gdiplus::REAL>(scale));
+
+		// 빗금 (왼쪽 아래 → 오른쪽 위), 꼬리표는 빗금 + 양옆 틈만큼 빼고 칠함
+		Gdiplus::GraphicsPath slash(Gdiplus::FillModeWinding);
+		slash.AddLine(4.0f, 20.0f, 20.0f, 4.0f);
+		Gdiplus::GraphicsPath gap(Gdiplus::FillModeWinding);
+		gap.AddLine(4.0f, 20.0f, 20.0f, 4.0f);
+		Gdiplus::Pen slashPen(Gdiplus::Color(255, 0, 0, 0), 2.2f);
+		slashPen.SetStartCap(Gdiplus::LineCapRound);
+		slashPen.SetEndCap(Gdiplus::LineCapRound);
+		Gdiplus::Pen gapPen(Gdiplus::Color(255, 0, 0, 0), 4.6f);
+		gapPen.SetStartCap(Gdiplus::LineCapRound);
+		gapPen.SetEndCap(Gdiplus::LineCapRound);
+		slash.Widen(&slashPen);
+		gap.Widen(&gapPen);
+
+		Gdiplus::GraphicsPath tag(Gdiplus::FillModeAlternate);
+		AddGenreTag(tag);
+		Gdiplus::Region tagRgn(&tag);
+		tagRgn.Exclude(&gap);
+		Gdiplus::SolidBrush brush(Gdiplus::Color(255, GetRValue(col), GetGValue(col), GetBValue(col)));
+		g.FillRegion(&brush, &tagRgn);
+		g.FillPath(&brush, &slash);
+	}
+
+	void ViewYear(CDC* dc, const CRect& area, COLORREF col, double fill)
+	{
+		Paint(dc, area, fill, col, [](Gdiplus::GraphicsPath& p)
+		{
+			AddRoundRect(p, 2.5f, 4.0f, 19.0f, 17.5f, 2.2f);    // 달력 몸체
+			AddRoundRect(p, 4.3f, 9.2f, 15.4f, 10.5f, 0.8f);    // 날짜 칸 자리 (구멍)
+			for (int i = 0; i < 3; ++i)
+				for (int j = 0; j < 2; ++j)
+					AddRoundRect(p, 6.0f + i * 4.4f, 11.0f + j * 4.2f, 2.6f, 2.6f, 0.5f);   // 날짜 칸 (구멍 안 - 다시 칠해짐)
+		});
+		// 위쪽 고리 두 개 (몸체와 겹치므로 따로 칠함)
+		Paint(dc, area, fill, col, [](Gdiplus::GraphicsPath& p)
+		{
+			AddRoundRect(p, 6.5f, 2.0f, 2.4f, 4.5f, 1.1f);
+			AddRoundRect(p, 15.1f, 2.0f, 2.4f, 4.5f, 1.1f);
+		});
+	}
+
+	void ViewWall(CDC* dc, const CRect& area, COLORREF col, double fill)
+	{
+		Paint(dc, area, fill, col, [](Gdiplus::GraphicsPath& p)
+		{
+			// 가로 칸 3×3 (칸 사이 아주 얇은 틈), 가운데 칸에 재생 삼각형 (구멍)
+			const float gap = 0.9f, w = (20.0f - gap * 2) / 3, h = (15.0f - gap * 2) / 3;
+			for (int r = 0; r < 3; ++r)
+				for (int c = 0; c < 3; ++c)
+				{
+					p.StartFigure();
+					p.AddRectangle(Gdiplus::RectF(2.0f + c * (w + gap), 4.5f + r * (h + gap), w, h));
+				}
+			const Gdiplus::PointF tri[3] = { { 10.9f, 10.2f }, { 10.9f, 13.8f }, { 13.9f, 12.0f } };
+			p.AddPolygon(tri, 3);
+		});
+	}
+
+	void ViewTreemap(CDC* dc, const CRect& area, COLORREF col, double fill)
+	{
+		Paint(dc, area, fill, col, [](Gdiplus::GraphicsPath& p)
+		{
+			// 왼쪽 큰 칸 | 오른쪽 위 중간 칸 | 오른쪽 아래 작은 칸 둘 (칸 사이 얇은 틈)
+			const float g = 1.2f;
+			AddRoundRect(p, 2.0f, 4.0f, 10.0f, 16.0f, 0.8f);
+			AddRoundRect(p, 12.0f + g, 4.0f, 22.0f - 12.0f - g, 9.0f, 0.8f);
+			AddRoundRect(p, 12.0f + g, 13.0f + g, 4.6f, 20.0f - 13.0f - g, 0.8f);
+			AddRoundRect(p, 12.0f + g + 4.6f + g, 13.0f + g, 22.0f - (12.0f + g + 4.6f + g), 20.0f - 13.0f - g, 0.8f);
+		});
+	}
+
+	void ViewTree(CDC* dc, const CRect& area, COLORREF col, double fill)
+	{
+		Paint(dc, area, fill, col, [](Gdiplus::GraphicsPath& p)
+		{
+			// 위 → 아래 계층 (왼쪽 정렬): 위 왼쪽 상위 상자 → 세로줄 → 가로줄 → 아래 하위 상자 셋 (선끼리 겹치지 않게 맞닿게)
+			AddRoundRect(p, 2.0f, 2.5f, 8.0f, 5.0f, 0.8f);             // 상위 (왼쪽 위)
+			AddRoundRect(p, 5.4f, 7.5f, 1.2f, 4.5f, 0.3f);             // 상위 → 가로줄 (세로)
+			AddRoundRect(p, 5.4f, 12.0f, 14.2f, 1.2f, 0.3f);           // 가로줄
+			for (int i = 0; i < 3; ++i)
+			{
+				const float cx = 6.0f + i * 6.5f;
+				AddRoundRect(p, cx - 0.6f, 13.2f, 1.2f, 2.3f, 0.3f);   // 가로줄 → 하위 (세로)
+				AddRoundRect(p, cx - 2.8f, 15.5f, 5.6f, 4.8f, 0.8f);   // 하위
+			}
+		});
+	}
+
+	void ViewLabel(CDC* dc, const CRect& area, COLORREF col, double fill)
+	{
+		Paint(dc, area, fill, col, [](Gdiplus::GraphicsPath& p)
+		{
+			AddRoundRect(p, 2.0f, 2.5f, 20.0f, 3.4f, 1.0f);           // 묶음 머리줄
+			for (int i = 0; i < 2; ++i)
+			{
+				const float y = 8.0f + i * 7.6f;
+				AddRoundRect(p, 2.0f, y + 1.6f, 2.6f, 2.6f, 0.6f);    // 체크 칸
+				AddRoundRect(p, 6.4f, y, 4.4f, 6.0f, 0.8f);           // 세로 커버
+				AddRoundRect(p, 12.6f, y + 1.9f, 9.4f, 2.2f, 1.0f);   // 줄
+			}
+		});
+	}
+
+	void ViewPackage(CDC* dc, const CRect& area, COLORREF col, double fill)
+	{
+		Paint(dc, area, fill, col, [](Gdiplus::GraphicsPath& p)
+		{
+			AddRoundRect(p, 5.0f, 2.0f, 14.0f, 20.0f, 1.8f);   // 케이스
+			AddRoundRect(p, 7.0f, 4.2f, 10.0f, 2.4f, 0.8f);    // 위쪽 띠 (구멍)
+			AddRoundRect(p, 7.0f, 8.4f, 10.0f, 11.4f, 0.8f);   // 표지 자리 (구멍)
+		});
+	}
+
+	void GenderFemale(CDC* dc, const CRect& area, COLORREF col, double fill)
+	{
+		Paint(dc, area, fill, col, [](Gdiplus::GraphicsPath& p)
+		{
+			AddRing(p, 12.0f, 8.6f, 6.6f, 4.3f);
+			AddCross(p, 10.9f, 13.1f, 15.2f, 23.0f, 7.8f, 16.2f, 18.0f, 20.2f);   // 고리 아래에 닿게 (y 15.2)
+		});
+	}
+
+	void GenderMale(CDC* dc, const CRect& area, COLORREF col, double fill)
+	{
+		Paint(dc, area, fill, col, [](Gdiplus::GraphicsPath& p)
+		{
+			AddRing(p, 9.5f, 14.5f, 6.5f, 4.3f);
+			// 몸통: x + y = 24 위 (고리 45° 바깥 r 6.7 에서 시작), 화살촉 빗변 x - y = 11.6 에 닿음
+			AddArrowNE(p, 24.0f, 14.27f, 17.8f, 0.78f, 21.0f, 3.0f, 6.4f);
+		});
+	}
+
+	void GenderBoth(CDC* dc, const CRect& area, COLORREF col, double fill)
+	{
+		Paint(dc, area, fill, col, [](Gdiplus::GraphicsPath& p)
+		{
+			AddRing(p, 10.5f, 12.5f, 5.5f, 3.5f);
+			AddCross(p, 9.5f, 11.5f, 18.0f, 23.5f, 7.3f, 13.7f, 20.0f, 21.8f);   // 아래 십자 (♀)
+			AddArrowNE(p, 23.0f, 14.6f, 18.25f, 0.78f, 21.0f, 2.0f, 5.5f);       // 오른쪽 위 화살표 (♂)
+		});
+	}
+
+	namespace
+	{
+		// 사람 실루엣 (24x24 설계 좌표): 머리 원 (hx, hy, hr) + 몸
+		void AddPersonFemale(Gdiplus::GraphicsPath& p, float hx, float hy, float hr, float top, float bottom, float topHalf, float bottomHalf)
+		{
+			p.StartFigure();
+			p.AddEllipse(hx - hr, hy - hr, hr * 2, hr * 2);
+			const Gdiplus::PointF dress[4] = {
+				{ hx - topHalf, top }, { hx + topHalf, top }, { hx + bottomHalf, bottom }, { hx - bottomHalf, bottom } };
+			p.AddPolygon(dress, 4);
+		}
+		void AddPersonMale(Gdiplus::GraphicsPath& p, float hx, float hy, float hr, float top, float bottom, float half, float r)
+		{
+			p.StartFigure();
+			p.AddEllipse(hx - hr, hy - hr, hr * 2, hr * 2);
+			AddRoundRect(p, hx - half, top, half * 2, bottom - top, r);
+		}
+	}
+
+	void PersonFemale(CDC* dc, const CRect& area, COLORREF col, double fill)
+	{
+		Paint(dc, area, fill, col, [](Gdiplus::GraphicsPath& p)
+		{
+			AddPersonFemale(p, 12.0f, 5.0f, 3.7f, 10.0f, 22.5f, 3.1f, 7.0f);
+		});
+	}
+
+	void PersonMale(CDC* dc, const CRect& area, COLORREF col, double fill)
+	{
+		Paint(dc, area, fill, col, [](Gdiplus::GraphicsPath& p)
+		{
+			AddPersonMale(p, 12.0f, 5.0f, 3.7f, 10.0f, 22.5f, 5.6f, 2.6f);
+		});
+	}
+
+	namespace
+	{
+		// 정렬 방향: 왼쪽 세로 화살표 (up = 위로) + 오른쪽 막대 3개 (widths 위→아래)
+		void AddSortIcon(Gdiplus::GraphicsPath& p, bool up, const float widths[3])
+		{
+			const float sx0 = 5.4f, sx1 = 7.8f;            // 몸통 x
+			const float tipY = up ? 3.0f : 21.0f;          // 화살촉 끝
+			const float baseY = up ? 9.2f : 14.8f;         // 화살촉 밑변
+			const float tailY = up ? 21.0f : 3.0f;         // 몸통 끝
+			const Gdiplus::PointF head[3] = { { 6.6f, tipY }, { 12.0f, baseY }, { 1.2f, baseY } };
+			p.AddPolygon(head, 3);
+			const float top = (std::min)(baseY, tailY), bottom = (std::max)(baseY, tailY);
+			p.StartFigure();
+			p.AddRectangle(Gdiplus::RectF(sx0, top - (up ? 0.3f : 0.0f), sx1 - sx0, bottom - top + 0.3f));
+			for (int i = 0; i < 3; ++i)
+				AddRoundRect(p, 14.0f, 4.2f + i * 6.4f, widths[i], 2.8f, 1.0f);
+		}
+	}
+
+	void SortAsc(CDC* dc, const CRect& area, COLORREF col, double fill)
+	{
+		Paint(dc, area, fill, col, [](Gdiplus::GraphicsPath& p)
+		{
+			const float w[3] = { 3.6f, 6.0f, 8.6f };
+			AddSortIcon(p, true, w);
+		});
+	}
+
+	void SortDesc(CDC* dc, const CRect& area, COLORREF col, double fill)
+	{
+		Paint(dc, area, fill, col, [](Gdiplus::GraphicsPath& p)
+		{
+			const float w[3] = { 8.6f, 6.0f, 3.6f };
+			AddSortIcon(p, false, w);
+		});
+	}
+
+	void GenderPair(CDC* dc, const CRect& area, COLORREF colF, COLORREF colM, double fill)
+	{
+		if (area.IsRectEmpty())
+			return;
+		const double side = (std::min)(area.Width(), area.Height()) * fill;
+		const double cx = area.left + area.Width() / 2.0;
+		const double cy = area.top + area.Height() / 2.0;
+		const int sub = static_cast<int>(side * 0.82 + 0.5);   // 기호 하나 크기
+		auto rectAt = [sub](double x, double y)
+		{
+			const int l = static_cast<int>(x - sub / 2.0 + 0.5);
+			const int t = static_cast<int>(y - sub / 2.0 + 0.5);
+			return CRect(l, t, l + sub, t + sub);
+		};
+		GenderFemale(dc, rectAt(cx - side * 0.17, cy + side * 0.02), colF, 1.0);   // 왼쪽 ♀
+		GenderMale(dc, rectAt(cx + side * 0.15, cy), colM, 1.0);                   // 오른쪽 ♂ (위에 겹침)
+	}
+
+	void PersonPair(CDC* dc, const CRect& area, COLORREF colF, COLORREF colM, double fill)
+	{
+		if (area.IsRectEmpty())
+			return;
+		EnsureGdiPlus();
+		const double side = (std::min)(area.Width(), area.Height()) * fill;
+		const double scale = side / 24.0;
+		const double x = area.left + (area.Width() - side) / 2.0;
+		const double y = area.top + (area.Height() - side) / 2.0;
+
+		Gdiplus::Graphics g(dc->GetSafeHdc());
+		g.SetSmoothingMode(Gdiplus::SmoothingModeAntiAlias);
+		g.SetPixelOffsetMode(Gdiplus::PixelOffsetModeHighQuality);
+		g.TranslateTransform(static_cast<Gdiplus::REAL>(x), static_cast<Gdiplus::REAL>(y));
+		g.ScaleTransform(static_cast<Gdiplus::REAL>(scale), static_cast<Gdiplus::REAL>(scale));
+
+		Gdiplus::GraphicsPath female(Gdiplus::FillModeWinding);
+		AddPersonFemale(female, 8.4f, 6.4f, 3.1f, 10.8f, 22.0f, 2.6f, 5.8f);   // 앞 (왼쪽)
+		Gdiplus::GraphicsPath male(Gdiplus::FillModeWinding);
+		AddPersonMale(male, 15.8f, 5.6f, 3.0f, 9.8f, 21.4f, 4.4f, 2.2f);       // 뒤 (오른쪽)
+
+		// 뒤 사람은 앞 사람 + 테두리(틈) 만큼 빼고 칠함
+		Gdiplus::GraphicsPath gap(Gdiplus::FillModeWinding);
+		gap.AddPath(&female, FALSE);
+		Gdiplus::Pen gapPen(Gdiplus::Color(255, 0, 0, 0), 2.0f);
+		gap.Widen(&gapPen);
+		Gdiplus::Region backRgn(&male);
+		backRgn.Exclude(&female);
+		backRgn.Exclude(&gap);
+		Gdiplus::SolidBrush mb(Gdiplus::Color(255, GetRValue(colM), GetGValue(colM), GetBValue(colM)));
+		g.FillRegion(&mb, &backRgn);
+		Gdiplus::SolidBrush fb(Gdiplus::Color(255, GetRValue(colF), GetGValue(colF), GetBValue(colF)));
+		g.FillPath(&fb, &female);
+	}
+
+	void Gear(CDC* dc, const CRect& area, COLORREF col, double fill, double rotateDeg)
+	{
+		// 톱니 8개 (사다리꼴) + 가운데 구멍 (rotateDeg 만큼 돌려서)
+		Paint(dc, area, fill, col, [rotateDeg](Gdiplus::GraphicsPath& p)
+		{
+			const double cx = 12.0, cy = 12.0;
+			const double rOut = 11.0, rIn = 8.4;    // 톱니 끝 / 톱니 뿌리
+			const int teeth = 8;
+			const double pi = 3.14159265358979;
+			const double step = 2 * pi / teeth;
+			std::vector<Gdiplus::PointF> pts;
+			for (int i = 0; i < teeth; ++i)
+			{
+				const double a = -pi / 2 + i * step + rotateDeg * pi / 180.0;
+				const double tw = step * 0.20;      // 톱니 끝 반폭 (각도)
+				const double bw = step * 0.30;      // 톱니 뿌리 반폭
+				auto pt = [&](double r, double ang)
+				{
+					return Gdiplus::PointF(static_cast<Gdiplus::REAL>(cx + r * std::cos(ang)), static_cast<Gdiplus::REAL>(cy + r * std::sin(ang)));
+				};
+				pts.push_back(pt(rIn, a - bw));
+				pts.push_back(pt(rOut, a - tw));
+				pts.push_back(pt(rOut, a + tw));
+				pts.push_back(pt(rIn, a + bw));
+			}
+			p.StartFigure();
+			p.AddPolygon(pts.data(), static_cast<INT>(pts.size()));
+			p.CloseFigure();
+			p.AddEllipse(static_cast<Gdiplus::REAL>(cx - 3.6), static_cast<Gdiplus::REAL>(cy - 3.6), 7.2f, 7.2f);   // 구멍
+		});
+	}
+
+	// 물방울 하나 (원 + 뾰족한 끝): 중심 (cx, cy), 반지름 r, 끝 방향 deg (0 = 위, 시계 방향)
+	static void AddDrop(Gdiplus::GraphicsPath& p, float cx, float cy, float r, float deg)
+	{
+		const float d = r * 2.1f;                        // 중심 ~ 끝 거리
+		const float ty = -r * r / d;                     // 접점 y
+		const float tx = r * std::sqrt(1.0f - (r / d) * (r / d));
+		const float sweepStart = static_cast<float>(std::atan2(ty, tx) * 180.0 / 3.14159265);   // 오른쪽 접점 각도
+		Gdiplus::GraphicsPath one;
+		one.StartFigure();
+		one.AddLine(0.0f, -d, tx, ty);
+		one.AddArc(-r, -r, r * 2, r * 2, sweepStart, 180.0f - 2.0f * sweepStart);   // 아래쪽으로 돌아 왼쪽 접점까지
+		one.CloseFigure();
+		Gdiplus::Matrix m;
+		m.Translate(cx, cy);
+		m.Rotate(deg);
+		one.Transform(&m);
+		p.AddPath(&one, FALSE);
+	}
+
+	void Drops(CDC* dc, const CRect& area, COLORREF col, double fill)
+	{
+		Paint(dc, area, fill, col, [](Gdiplus::GraphicsPath& p)
+		{
+			// 큰 물방울(왼쪽 아래) + 작은 물방울 + 아주 작은 방울 (튀는 모양)
+			AddDrop(p, 9.5f, 14.8f, 6.2f, -40.0f);
+			AddDrop(p, 18.6f, 7.2f, 2.5f, 25.0f);
+			p.AddEllipse(18.0f, 14.2f, 3.4f, 3.4f);
+		});
+	}
+
+	void Heart(CDC* dc, const CRect& area, COLORREF col, double fill)
+	{
+		Paint(dc, area, fill, col, [](Gdiplus::GraphicsPath& p)
+		{
+			p.StartFigure();
+			p.AddLine(12.0f, 21.35f, 10.55f, 20.03f);
+			p.AddBezier(10.55f, 20.03f, 5.4f, 15.36f, 2.0f, 12.28f, 2.0f, 8.5f);
+			p.AddBezier(2.0f, 8.5f, 2.0f, 5.42f, 4.42f, 3.0f, 7.5f, 3.0f);
+			p.AddBezier(7.5f, 3.0f, 9.24f, 3.0f, 10.91f, 3.81f, 12.0f, 5.09f);
+			p.AddBezier(12.0f, 5.09f, 13.09f, 3.81f, 14.76f, 3.0f, 16.5f, 3.0f);
+			p.AddBezier(16.5f, 3.0f, 19.58f, 3.0f, 22.0f, 5.42f, 22.0f, 8.5f);
+			p.AddBezier(22.0f, 8.5f, 22.0f, 12.28f, 18.6f, 15.36f, 13.45f, 20.04f);
+			p.CloseFigure();
+		});
+	}
+}
+
+// ---------------------------------------------------------------------------
+// 여성 / 남성 배우 기본 이미지 (실루엣, SVG 경로를 그대로 옮긴 데이터)
+
+namespace
+{
+	// 여성 실루엣 1 (사용자 제공 PNG 를 벡터로 변환 - tools/png_to_silhouette.py)
+	// [점 수(시작점 + 베지어 3점씩), x, y, ...] 반복, 0 = 끝  (viewBox 472x1284, PNG 알파 윤곽선 추적)
+	const float kFemale1[] = {
+		625, 40.5f, 44.5f, 38.3f, 45.7f, 35.0f, 50.3f, 33.5f, 51.5f, 32.0f, 52.7f, 32.3f, 50.7f, 31.5f, 51.5f, 30.7f, 52.3f, 29.0f, 53.2f, 28.5f, 56.5f, 28.0f, 59.8f, 29.0f, 66.7f, 28.5f, 71.5f, 28.0f, 76.3f, 25.8f, 80.8f, 25.5f, 85.5f, 25.2f, 90.2f, 25.5f, 94.7f, 26.5f, 99.5f, 27.5f, 104.3f, 29.2f, 109.0f, 31.5f, 114.5f, 33.8f, 120.0f, 37.2f, 123.3f, 40.5f, 132.5f, 43.8f, 141.7f, 46.7f, 155.2f, 51.5f, 169.5f, 56.3f, 183.8f, 65.3f, 204.0f, 69.5f, 218.5f, 73.7f, 233.0f, 74.5f, 247.5f, 76.5f, 256.5f, 78.5f, 265.5f, 78.5f, 266.5f, 81.5f, 272.5f, 84.5f, 278.5f, 89.0f, 285.3f, 94.5f, 292.5f, 100.0f, 299.7f, 106.8f, 303.8f, 114.5f, 315.5f, 122.2f, 327.2f, 134.3f, 352.0f, 140.5f, 362.5f, 146.7f, 373.0f, 148.5f, 374.7f, 151.5f, 378.5f, 154.5f, 382.3f, 156.3f, 382.0f, 158.5f, 385.5f, 160.7f, 389.0f, 163.0f, 396.7f, 164.5f, 399.5f, 166.0f, 402.3f, 166.8f, 400.0f, 167.5f, 402.5f, 168.2f, 405.0f, 167.3f, 410.7f, 168.5f, 414.5f, 169.7f, 418.3f, 173.7f, 423.0f, 174.5f, 425.5f, 175.3f, 428.0f, 175.5f, 426.5f, 173.5f, 429.5f, 171.5f, 432.5f, 167.0f, 439.7f, 162.5f, 443.5f, 158.0f, 447.3f, 149.5f, 450.5f, 146.5f, 452.5f, 143.5f, 454.5f, 145.3f, 455.0f, 144.5f, 455.5f, 143.7f, 456.0f, 142.8f, 454.7f, 141.5f, 455.5f, 140.2f, 456.3f, 138.5f, 459.2f, 136.5f, 460.5f, 134.5f, 461.8f, 133.3f, 460.3f, 129.5f, 463.5f, 125.7f, 466.7f, 117.2f, 476.5f, 113.5f, 479.5f, 109.8f, 482.5f, 112.5f, 478.7f, 107.5f, 481.5f, 102.5f, 484.3f, 89.5f, 492.2f, 83.5f, 496.5f, 77.5f, 500.8f, 73.8f, 505.7f, 71.5f, 507.5f, 69.2f, 509.3f, 72.5f, 504.8f, 69.5f, 507.5f, 66.5f, 510.2f, 58.2f, 517.8f, 53.5f, 523.5f, 48.8f, 529.2f, 44.2f, 537.0f, 41.5f, 541.5f, 38.8f, 546.0f, 39.0f, 546.3f, 37.5f, 550.5f, 36.0f, 554.7f, 33.7f, 561.7f, 32.5f, 566.5f, 31.3f, 571.3f, 30.7f, 573.2f, 30.5f, 579.5f, 30.3f, 585.8f, 30.7f, 597.3f, 31.5f, 604.5f, 32.3f, 611.7f, 33.7f, 616.2f, 35.5f, 622.5f, 37.3f, 628.8f, 40.2f, 628.5f, 42.5f, 642.5f, 44.8f, 656.5f, 47.0f, 689.8f, 49.5f, 706.5f, 52.0f, 723.2f, 53.3f, 727.2f, 57.5f, 742.5f, 61.7f, 757.8f, 70.8f, 784.8f, 74.5f, 798.5f, 78.2f, 812.2f, 78.7f, 815.3f, 79.5f, 824.5f, 80.3f, 833.7f, 81.3f, 837.0f, 79.5f, 853.5f, 77.7f, 870.0f, 70.3f, 908.0f, 68.5f, 923.5f, 66.7f, 939.0f, 68.2f, 940.2f, 68.5f, 946.5f, 68.8f, 952.8f, 68.2f, 953.0f, 70.5f, 961.5f, 72.8f, 970.0f, 74.2f, 978.3f, 82.5f, 997.5f, 90.8f, 1016.7f, 112.8f, 1059.7f, 120.5f, 1076.5f, 128.2f, 1093.3f, 126.5f, 1092.2f, 128.5f, 1098.5f, 130.5f, 1104.8f, 131.8f, 1109.5f, 132.5f, 1114.5f, 133.2f, 1119.5f, 134.7f, 1123.8f, 132.5f, 1128.5f, 130.3f, 1133.2f, 122.7f, 1138.7f, 119.5f, 1142.5f, 116.3f, 1146.3f, 115.2f, 1148.3f, 113.5f, 1151.5f, 111.8f, 1154.7f, 110.0f, 1158.2f, 109.5f, 1161.5f, 109.0f, 1164.8f, 108.3f, 1166.2f, 110.5f, 1171.5f, 112.7f, 1176.8f, 119.8f, 1187.8f, 122.5f, 1193.5f, 125.2f, 1199.2f, 125.2f, 1200.0f, 126.5f, 1205.5f, 127.8f, 1211.0f, 129.7f, 1219.5f, 130.5f, 1226.5f, 131.3f, 1233.5f, 130.2f, 1243.8f, 131.5f, 1247.5f, 132.8f, 1251.2f, 137.7f, 1251.2f, 138.5f, 1248.5f, 139.3f, 1245.8f, 136.8f, 1238.5f, 136.5f, 1231.5f, 136.2f, 1224.5f, 136.2f, 1211.7f, 136.5f, 1206.5f, 136.8f, 1201.3f, 137.5f, 1201.8f, 138.5f, 1200.5f, 139.5f, 1199.2f, 140.8f, 1197.8f, 142.5f, 1198.5f, 144.2f, 1199.2f, 146.5f, 1201.7f, 148.5f, 1204.5f, 150.5f, 1207.3f, 151.8f, 1207.8f, 154.5f, 1215.5f, 157.2f, 1223.2f, 162.0f, 1243.7f, 164.5f, 1250.5f, 167.0f, 1257.3f, 166.0f, 1255.2f, 169.5f, 1256.5f, 173.0f, 1257.8f, 173.8f, 1258.2f, 185.5f, 1258.5f, 197.2f, 1258.8f, 229.5f, 1258.8f, 239.5f, 1258.5f, 249.5f, 1258.2f, 244.7f, 1258.7f, 245.5f, 1256.5f, 246.3f, 1254.3f, 248.2f, 1249.8f, 244.5f, 1245.5f, 240.8f, 1241.2f, 229.2f, 1235.2f, 223.5f, 1230.5f, 217.8f, 1225.8f, 213.2f, 1219.7f, 210.5f, 1217.5f, 207.8f, 1215.3f, 208.3f, 1217.8f, 207.5f, 1217.5f, 206.7f, 1217.2f, 207.3f, 1222.8f, 205.5f, 1215.5f, 203.7f, 1208.2f, 199.8f, 1185.7f, 196.5f, 1173.5f, 193.2f, 1161.3f, 187.8f, 1150.7f, 185.5f, 1142.5f, 183.2f, 1134.3f, 185.7f, 1132.7f, 182.5f, 1124.5f, 179.3f, 1116.3f, 170.3f, 1101.7f, 166.5f, 1093.5f, 162.7f, 1085.3f, 162.7f, 1086.2f, 159.5f, 1075.5f, 156.3f, 1064.8f, 150.7f, 1048.8f, 147.5f, 1029.5f, 144.3f, 1010.2f, 142.7f, 977.7f, 140.5f, 959.5f, 138.3f, 941.3f, 135.7f, 931.3f, 134.5f, 920.5f, 133.3f, 909.7f, 131.5f, 906.8f, 133.5f, 894.5f, 135.5f, 882.2f, 144.5f, 861.2f, 146.5f, 846.5f, 148.5f, 831.8f, 144.5f, 821.8f, 145.5f, 806.5f, 146.5f, 791.2f, 150.8f, 771.0f, 152.5f, 754.5f, 154.2f, 738.0f, 154.7f, 715.5f, 155.5f, 707.5f, 156.3f, 699.5f, 155.8f, 703.2f, 157.5f, 706.5f, 159.2f, 709.8f, 161.5f, 718.7f, 165.5f, 727.5f, 169.5f, 736.3f, 173.5f, 746.2f, 181.5f, 759.5f, 189.5f, 772.8f, 206.5f, 796.2f, 213.5f, 807.5f, 220.5f, 818.8f, 221.2f, 822.0f, 223.5f, 827.5f, 225.8f, 833.0f, 226.3f, 835.2f, 227.5f, 840.5f, 228.7f, 845.8f, 228.0f, 852.0f, 230.5f, 859.5f, 233.0f, 867.0f, 240.0f, 879.5f, 242.5f, 885.5f, 245.0f, 891.5f, 244.0f, 885.0f, 245.5f, 895.5f, 247.0f, 906.0f, 249.3f, 935.3f, 251.5f, 948.5f, 253.7f, 961.7f, 255.3f, 966.5f, 258.5f, 974.5f, 261.7f, 982.5f, 262.3f, 983.7f, 270.5f, 996.5f, 278.7f, 1009.3f, 299.8f, 1039.3f, 307.5f, 1051.5f, 315.2f, 1063.7f, 313.5f, 1062.7f, 316.5f, 1069.5f, 319.5f, 1076.3f, 323.5f, 1086.7f, 325.5f, 1092.5f, 327.5f, 1098.3f, 328.0f, 1100.5f, 328.5f, 1104.5f, 329.0f, 1108.5f, 328.8f, 1113.8f, 328.5f, 1116.5f, 328.2f, 1119.2f, 329.3f, 1117.3f, 326.5f, 1120.5f, 323.7f, 1123.7f, 315.7f, 1129.7f, 311.5f, 1135.5f, 307.3f, 1141.3f, 303.0f, 1150.7f, 301.5f, 1155.5f, 300.0f, 1160.3f, 300.7f, 1159.7f, 302.5f, 1164.5f, 304.3f, 1169.3f, 310.0f, 1178.5f, 312.5f, 1184.5f, 315.0f, 1190.5f, 316.2f, 1194.3f, 317.5f, 1200.5f, 318.8f, 1206.7f, 320.0f, 1214.5f, 320.5f, 1221.5f, 321.0f, 1228.5f, 319.3f, 1239.0f, 320.5f, 1242.5f, 321.7f, 1246.0f, 326.5f, 1249.0f, 327.5f, 1242.5f, 328.5f, 1236.0f, 326.0f, 1212.3f, 326.5f, 1203.5f, 327.0f, 1194.7f, 329.5f, 1192.2f, 330.5f, 1189.5f, 331.5f, 1186.8f, 331.7f, 1187.8f, 332.5f, 1187.5f, 333.3f, 1187.2f, 333.8f, 1186.8f, 335.5f, 1187.5f, 337.2f, 1188.2f, 339.2f, 1188.3f, 342.5f, 1191.5f, 345.8f, 1194.7f, 352.3f, 1201.7f, 355.5f, 1206.5f, 358.7f, 1211.3f, 359.7f, 1214.5f, 361.5f, 1220.5f, 363.3f, 1226.5f, 364.8f, 1237.7f, 366.5f, 1242.5f, 368.2f, 1247.3f, 365.5f, 1248.0f, 371.5f, 1249.5f, 377.5f, 1251.0f, 390.5f, 1251.3f, 402.5f, 1251.5f, 414.5f, 1251.7f, 436.2f, 1251.0f, 443.5f, 1250.5f, 450.8f, 1250.0f, 446.0f, 1249.7f, 446.5f, 1248.5f, 447.0f, 1247.3f, 446.8f, 1245.0f, 446.5f, 1243.5f, 446.2f, 1242.0f, 449.2f, 1243.2f, 444.5f, 1239.5f, 439.8f, 1235.8f, 425.3f, 1226.8f, 418.5f, 1221.5f, 411.7f, 1216.2f, 406.5f, 1210.7f, 403.5f, 1207.5f, 400.5f, 1204.3f, 401.5f, 1207.5f, 400.5f, 1202.5f, 399.5f, 1197.5f, 398.8f, 1185.3f, 397.5f, 1177.5f, 396.2f, 1169.7f, 395.0f, 1163.5f, 392.5f, 1155.5f, 390.0f, 1147.5f, 384.7f, 1136.2f, 382.5f, 1129.5f, 380.3f, 1122.8f, 382.3f, 1122.8f, 379.5f, 1115.5f, 376.7f, 1108.2f, 370.8f, 1099.0f, 365.5f, 1085.5f, 360.2f, 1072.0f, 353.8f, 1055.3f, 347.5f, 1034.5f, 341.2f, 1013.7f, 334.2f, 983.0f, 327.5f, 960.5f, 320.8f, 938.0f, 311.7f, 914.2f, 307.5f, 899.5f, 303.3f, 884.8f, 303.3f, 881.0f, 302.5f, 872.5f, 301.7f, 864.0f, 302.8f, 854.2f, 302.5f, 848.5f, 302.2f, 842.8f, 302.0f, 842.7f, 300.5f, 838.5f, 299.0f, 834.3f, 295.3f, 828.3f, 293.5f, 823.5f, 291.7f, 818.7f, 291.0f, 821.8f, 289.5f, 809.5f, 288.0f, 797.2f, 286.8f, 767.2f, 284.5f, 749.5f, 282.2f, 731.8f, 279.7f, 720.0f, 275.5f, 703.5f, 271.3f, 687.0f, 266.3f, 669.2f, 259.5f, 650.5f, 252.7f, 631.8f, 239.2f, 603.3f, 234.5f, 591.5f, 229.8f, 579.7f, 230.2f, 586.2f, 231.5f, 579.5f, 232.8f, 572.8f, 238.7f, 559.2f, 242.5f, 551.5f, 246.3f, 543.8f, 252.0f, 538.7f, 254.5f, 533.5f, 257.0f, 528.3f, 255.7f, 525.5f, 257.5f, 520.5f, 259.3f, 515.5f, 262.7f, 510.8f, 265.5f, 503.5f, 268.3f, 496.2f, 271.7f, 483.5f, 274.5f, 476.5f, 277.3f, 469.5f, 277.5f, 469.3f, 282.5f, 461.5f, 287.5f, 453.7f, 300.8f, 439.8f, 304.5f, 429.5f, 308.2f, 419.2f, 304.2f, 405.5f, 304.5f, 399.5f, 304.8f, 393.5f, 305.8f, 394.8f, 306.5f, 393.5f, 307.2f, 392.2f, 307.2f, 391.8f, 308.5f, 391.5f, 309.8f, 391.2f, 311.7f, 392.0f, 314.5f, 391.5f, 317.3f, 391.0f, 321.8f, 390.0f, 325.5f, 388.5f, 329.2f, 387.0f, 333.0f, 385.3f, 336.5f, 382.5f, 340.0f, 379.7f, 343.5f, 376.7f, 346.5f, 371.5f, 349.5f, 366.3f, 353.0f, 358.8f, 354.5f, 351.5f, 356.0f, 344.2f, 359.5f, 335.7f, 355.5f, 327.5f, 351.5f, 319.3f, 336.7f, 308.0f, 330.5f, 302.5f, 324.3f, 297.0f, 321.5f, 296.2f, 318.5f, 294.5f, 315.5f, 292.8f, 313.7f, 293.2f, 312.5f, 292.5f, 311.3f, 291.8f, 313.5f, 291.5f, 311.5f, 290.5f, 309.5f, 289.5f, 302.5f, 287.5f, 300.5f, 286.5f, 298.5f, 285.5f, 300.3f, 284.8f, 299.5f, 284.5f, 298.7f, 284.2f, 297.2f, 285.2f, 295.5f, 284.5f, 293.8f, 283.8f, 291.0f, 281.2f, 289.5f, 280.5f, 288.0f, 279.8f, 289.5f, 282.2f, 286.5f, 280.5f, 283.5f, 278.8f, 274.0f, 274.0f, 271.5f, 270.5f, 269.0f, 267.0f, 271.2f, 262.5f, 271.5f, 259.5f, 271.8f, 256.5f, 268.0f, 263.3f, 273.5f, 252.5f, 279.0f, 241.7f, 297.3f, 209.5f, 304.5f, 194.5f, 311.7f, 179.5f, 314.3f, 169.3f, 316.5f, 162.5f, 318.7f, 155.7f, 317.0f, 155.3f, 317.5f, 153.5f, 318.0f, 151.7f, 316.8f, 164.0f, 319.5f, 151.5f, 322.2f, 139.0f, 331.3f, 96.7f, 333.5f, 78.5f, 335.7f, 60.3f, 333.3f, 49.5f, 332.5f, 42.5f, 331.7f, 35.5f, 340.5f, 37.8f, 328.5f, 36.5f, 316.5f, 35.2f, 276.7f, 34.3f, 260.5f, 34.5f, 244.3f, 34.7f, 241.5f, 36.0f, 231.5f, 37.5f, 221.5f, 39.0f, 210.5f, 42.2f, 200.5f, 43.5f, 190.5f, 44.8f, 178.2f, 44.5f, 171.5f, 45.5f, 164.8f, 46.5f, 164.8f, 48.5f, 160.5f, 49.5f, 156.2f, 50.5f, 148.5f, 50.8f, 145.5f, 51.5f, 142.5f, 52.2f, 143.7f, 54.0f, 142.5f, 53.5f, 141.3f, 53.0f, 140.7f, 50.0f, 138.5f, 48.5f, 136.3f, 47.0f, 131.8f, 46.3f, 129.5f, 44.5f, 127.2f, 42.7f, 125.0f, 38.0f, 124.5f, 37.5f, 124.0f, 37.0f, 126.3f, 40.2f, 126.5f, 41.5f, 126.7f, 42.8f, 127.3f, 45.2f, 125.5f, 45.5f, 123.7f, 45.8f, 118.7f, 43.0f, 115.5f, 43.5f, 112.3f, 44.0f, 109.5f, 47.8f, 106.5f, 48.5f, 103.5f, 49.2f, 101.2f, 47.0f, 97.5f, 47.5f, 93.8f, 48.0f, 87.7f, 49.5f, 84.5f, 51.5f, 81.3f, 53.5f, 82.7f, 59.3f, 78.5f, 59.5f, 74.3f, 59.7f, 64.8f, 55.0f, 59.5f, 52.5f, 54.2f, 50.0f, 49.7f, 45.8f, 46.5f, 44.5f, 43.3f, 43.2f, 42.7f, 43.3f, 40.5f, 44.5f,
+		55, 105.5f, 169.5f, 106.8f, 170.2f, 111.2f, 173.7f, 112.5f, 175.5f, 113.8f, 177.3f, 112.5f, 179.0f, 113.5f, 180.5f, 114.5f, 182.0f, 117.0f, 183.8f, 118.5f, 184.5f, 120.0f, 185.2f, 121.2f, 185.0f, 122.5f, 184.5f, 123.8f, 184.0f, 125.5f, 183.5f, 126.5f, 181.5f, 127.5f, 179.5f, 127.2f, 173.5f, 128.5f, 172.5f, 129.8f, 171.5f, 132.8f, 174.0f, 134.5f, 175.5f, 136.2f, 177.0f, 138.5f, 179.7f, 138.5f, 181.5f, 138.5f, 183.3f, 135.5f, 184.7f, 134.5f, 186.5f, 133.5f, 188.3f, 131.3f, 193.5f, 132.5f, 192.5f, 133.7f, 191.5f, 139.2f, 181.8f, 141.5f, 180.5f, 143.8f, 179.2f, 145.8f, 179.0f, 146.5f, 184.5f, 147.2f, 190.0f, 146.2f, 207.3f, 145.5f, 213.5f, 144.8f, 219.7f, 143.7f, 219.5f, 142.5f, 221.5f, 141.3f, 223.5f, 143.3f, 228.7f, 138.5f, 225.5f, 133.7f, 222.3f, 119.2f, 211.5f, 113.5f, 202.5f, 107.8f, 193.5f, 105.8f, 177.0f, 104.5f, 171.5f, 103.2f, 166.0f, 104.2f, 168.8f, 105.5f, 169.5f,
+		73, 251.5f, 165.5f, 253.3f, 165.7f, 252.7f, 167.8f, 252.5f, 169.5f, 252.3f, 171.2f, 253.3f, 172.0f, 250.5f, 175.5f, 247.7f, 179.0f, 237.7f, 186.0f, 235.5f, 190.5f, 233.3f, 195.0f, 239.2f, 198.7f, 237.5f, 202.5f, 235.8f, 206.3f, 229.0f, 209.2f, 225.5f, 213.5f, 222.0f, 217.8f, 219.0f, 225.3f, 216.5f, 228.5f, 214.0f, 231.7f, 213.8f, 231.8f, 210.5f, 232.5f, 207.2f, 233.2f, 199.3f, 233.2f, 196.5f, 232.5f, 193.7f, 231.8f, 194.0f, 230.5f, 193.5f, 228.5f, 193.0f, 226.5f, 192.8f, 225.2f, 193.5f, 220.5f, 194.2f, 215.8f, 196.3f, 204.2f, 197.5f, 200.5f, 198.7f, 196.8f, 197.0f, 198.7f, 200.5f, 198.5f, 204.0f, 198.3f, 215.0f, 200.0f, 218.5f, 199.5f, 222.0f, 199.0f, 221.0f, 197.0f, 221.5f, 195.5f, 222.0f, 194.0f, 221.2f, 191.5f, 221.5f, 190.5f, 221.8f, 189.5f, 222.8f, 190.8f, 223.5f, 189.5f, 224.2f, 188.2f, 224.7f, 184.0f, 225.5f, 182.5f, 226.3f, 181.0f, 228.0f, 181.3f, 228.5f, 180.5f, 229.0f, 179.7f, 227.8f, 178.5f, 228.5f, 177.5f, 229.2f, 176.5f, 231.5f, 175.8f, 232.5f, 174.5f, 233.5f, 173.2f, 233.8f, 170.7f, 234.5f, 169.5f, 235.2f, 168.3f, 235.3f, 167.7f, 236.5f, 167.5f, 237.7f, 167.3f, 239.0f, 168.8f, 241.5f, 168.5f, 244.0f, 168.2f, 249.7f, 165.3f, 251.5f, 165.5f,
+		34, 265.5f, 163.5f, 267.0f, 163.3f, 267.3f, 164.8f, 266.5f, 167.5f, 265.7f, 170.2f, 261.8f, 177.3f, 260.5f, 179.5f, 259.2f, 181.7f, 258.7f, 179.8f, 258.5f, 180.5f, 258.3f, 181.2f, 259.7f, 182.3f, 259.5f, 183.5f, 259.3f, 184.7f, 258.3f, 186.7f, 257.5f, 187.5f, 256.7f, 188.3f, 256.8f, 186.7f, 254.5f, 188.5f, 252.2f, 190.3f, 245.5f, 197.8f, 243.5f, 198.5f, 241.5f, 199.2f, 241.5f, 196.2f, 242.5f, 192.5f, 243.5f, 188.8f, 247.0f, 180.5f, 249.5f, 176.5f, 252.0f, 172.5f, 254.8f, 170.7f, 257.5f, 168.5f, 260.2f, 166.3f, 264.0f, 163.7f, 265.5f, 163.5f,
+		34, 254.5f, 75.5f, 257.5f, 76.3f, 266.7f, 80.2f, 271.5f, 81.5f, 276.3f, 82.8f, 281.2f, 82.8f, 283.5f, 83.5f, 285.8f, 84.2f, 285.5f, 82.2f, 285.5f, 85.5f, 285.5f, 88.8f, 284.5f, 97.7f, 283.5f, 103.5f, 282.5f, 109.3f, 281.5f, 114.3f, 279.5f, 120.5f, 277.5f, 126.7f, 273.2f, 137.5f, 271.5f, 140.5f, 269.8f, 143.5f, 270.3f, 140.7f, 269.5f, 138.5f, 268.7f, 136.3f, 267.7f, 133.5f, 266.5f, 127.5f, 265.3f, 121.5f, 264.7f, 111.0f, 262.5f, 102.5f, 260.3f, 94.0f, 254.8f, 81.0f, 253.5f, 76.5f, 252.2f, 72.0f, 251.5f, 74.7f, 254.5f, 75.5f,
+		0
+	};
+
+	// 여성 실루엣 2 (사용자 제공 PNG 를 벡터로 변환 - tools/png_to_silhouette.py)
+	// [점 수(시작점 + 베지어 3점씩), x, y, ...] 반복, 0 = 끝  (viewBox 516x1284, PNG 알파 윤곽선 추적)
+	const float kFemale2[] = {
+		622, 214.5f, 26.5f, 209.7f, 27.3f, 206.7f, 30.7f, 204.5f, 31.5f, 202.3f, 32.3f, 203.8f, 30.2f, 201.5f, 31.5f, 199.2f, 32.8f, 193.0f, 38.0f, 190.5f, 39.5f, 188.0f, 41.0f, 189.8f, 37.8f, 186.5f, 40.5f, 183.2f, 43.2f, 175.2f, 49.8f, 170.5f, 55.5f, 165.8f, 61.2f, 160.7f, 70.3f, 158.5f, 74.5f, 156.3f, 78.7f, 158.0f, 79.3f, 157.5f, 80.5f, 157.0f, 81.7f, 155.8f, 80.7f, 155.5f, 81.5f, 155.2f, 82.3f, 156.0f, 84.0f, 155.5f, 85.5f, 155.0f, 87.0f, 154.2f, 84.0f, 152.5f, 90.5f, 150.8f, 97.0f, 148.5f, 113.2f, 145.5f, 124.5f, 142.5f, 135.8f, 136.5f, 150.2f, 134.5f, 158.5f, 132.5f, 166.8f, 132.5f, 170.2f, 133.5f, 174.5f, 134.5f, 178.8f, 139.7f, 181.7f, 140.5f, 184.5f, 141.3f, 187.3f, 139.3f, 189.8f, 138.5f, 191.5f, 137.7f, 193.2f, 135.8f, 193.7f, 135.5f, 194.5f, 135.2f, 195.3f, 136.7f, 196.0f, 136.5f, 196.5f, 136.3f, 197.0f, 134.8f, 194.0f, 134.5f, 197.5f, 134.2f, 201.0f, 133.8f, 213.7f, 134.5f, 217.5f, 135.2f, 221.3f, 138.2f, 221.0f, 138.5f, 220.5f, 138.8f, 220.0f, 136.8f, 217.2f, 136.5f, 214.5f, 136.2f, 211.8f, 136.3f, 206.8f, 136.5f, 204.5f, 136.7f, 202.2f, 136.8f, 201.3f, 137.5f, 200.5f, 138.2f, 199.7f, 138.7f, 197.7f, 140.5f, 199.5f, 142.3f, 201.3f, 147.3f, 209.2f, 148.5f, 211.5f, 149.7f, 213.8f, 147.2f, 212.3f, 147.5f, 213.5f, 147.8f, 214.7f, 149.3f, 217.2f, 150.5f, 218.5f, 151.7f, 219.8f, 151.0f, 221.0f, 154.5f, 221.5f, 158.0f, 222.0f, 168.2f, 221.0f, 171.5f, 221.5f, 174.8f, 222.0f, 174.5f, 223.5f, 174.5f, 224.5f, 174.5f, 225.5f, 175.0f, 227.0f, 171.5f, 227.5f, 168.0f, 228.0f, 158.0f, 226.8f, 153.5f, 227.5f, 149.0f, 228.2f, 146.8f, 229.8f, 144.5f, 231.5f, 142.2f, 233.2f, 141.0f, 234.3f, 139.5f, 237.5f, 138.0f, 240.7f, 136.7f, 243.8f, 135.5f, 250.5f, 134.3f, 257.2f, 133.5f, 270.8f, 132.5f, 277.5f, 131.5f, 284.2f, 130.0f, 284.2f, 129.5f, 290.5f, 129.0f, 296.8f, 128.2f, 302.8f, 129.5f, 315.5f, 130.8f, 328.2f, 136.2f, 351.0f, 137.5f, 366.5f, 138.8f, 382.0f, 137.8f, 400.2f, 137.5f, 408.5f, 137.2f, 416.8f, 136.5f, 413.8f, 135.5f, 416.5f, 134.5f, 419.2f, 136.8f, 418.7f, 131.5f, 424.5f, 126.2f, 430.3f, 111.7f, 441.3f, 103.5f, 451.5f, 95.3f, 461.7f, 86.0f, 479.3f, 82.5f, 485.5f, 79.0f, 491.7f, 83.8f, 486.5f, 82.5f, 488.5f, 81.2f, 490.5f, 76.0f, 495.3f, 74.5f, 497.5f, 73.0f, 499.7f, 75.0f, 499.5f, 73.5f, 501.5f, 72.0f, 503.5f, 68.5f, 506.0f, 65.5f, 509.5f, 62.5f, 513.0f, 57.2f, 520.0f, 55.5f, 522.5f, 53.8f, 525.0f, 59.5f, 520.2f, 55.5f, 524.5f, 51.5f, 528.8f, 36.5f, 543.0f, 31.5f, 548.5f, 26.5f, 554.0f, 26.5f, 553.3f, 25.5f, 557.5f, 24.5f, 561.7f, 24.7f, 566.5f, 25.5f, 573.5f, 26.3f, 580.5f, 29.8f, 591.7f, 30.5f, 599.5f, 31.2f, 607.3f, 28.5f, 614.5f, 29.5f, 620.5f, 30.5f, 626.5f, 35.5f, 630.5f, 36.5f, 635.5f, 37.5f, 640.5f, 33.7f, 647.0f, 35.5f, 650.5f, 37.3f, 654.0f, 44.8f, 654.8f, 47.5f, 656.5f, 50.2f, 658.2f, 49.7f, 657.8f, 51.5f, 660.5f, 53.3f, 663.2f, 55.7f, 662.8f, 58.5f, 672.5f, 61.3f, 682.2f, 64.3f, 702.2f, 68.5f, 718.5f, 72.7f, 734.8f, 79.7f, 756.0f, 83.5f, 770.5f, 87.3f, 785.0f, 90.2f, 794.5f, 91.5f, 805.5f, 92.8f, 816.5f, 93.3f, 820.3f, 91.5f, 836.5f, 89.7f, 852.7f, 82.5f, 887.0f, 80.5f, 902.5f, 78.5f, 918.0f, 79.2f, 921.7f, 79.5f, 929.5f, 79.8f, 937.3f, 80.8f, 941.8f, 82.5f, 949.5f, 84.2f, 957.2f, 82.8f, 957.2f, 89.5f, 975.5f, 96.2f, 993.8f, 115.0f, 1039.5f, 122.5f, 1059.5f, 130.0f, 1079.5f, 132.3f, 1087.3f, 134.5f, 1095.5f, 136.7f, 1103.7f, 135.8f, 1103.0f, 135.5f, 1108.5f, 135.2f, 1114.0f, 132.0f, 1123.2f, 132.5f, 1128.5f, 133.0f, 1133.8f, 138.2f, 1135.2f, 138.5f, 1140.5f, 138.8f, 1145.8f, 134.2f, 1153.0f, 134.5f, 1160.5f, 134.8f, 1168.0f, 139.5f, 1179.8f, 140.5f, 1185.5f, 141.5f, 1191.2f, 141.3f, 1187.3f, 140.5f, 1194.5f, 139.7f, 1201.7f, 135.8f, 1220.8f, 135.5f, 1228.5f, 135.2f, 1236.2f, 137.7f, 1238.2f, 138.5f, 1240.5f, 139.3f, 1242.8f, 135.2f, 1239.5f, 140.5f, 1242.5f, 145.8f, 1245.5f, 163.7f, 1255.8f, 170.5f, 1258.5f, 177.3f, 1261.2f, 176.7f, 1261.0f, 181.5f, 1258.5f, 186.3f, 1256.0f, 196.0f, 1248.5f, 199.5f, 1243.5f, 203.0f, 1238.5f, 204.3f, 1237.5f, 202.5f, 1228.5f, 200.7f, 1219.5f, 191.3f, 1201.0f, 188.5f, 1189.5f, 185.7f, 1178.0f, 187.0f, 1168.7f, 185.5f, 1159.5f, 184.0f, 1150.3f, 180.5f, 1142.5f, 179.5f, 1134.5f, 178.5f, 1126.5f, 181.5f, 1119.0f, 179.5f, 1111.5f, 177.5f, 1104.0f, 170.7f, 1096.7f, 167.5f, 1089.5f, 164.3f, 1082.3f, 162.8f, 1078.0f, 160.5f, 1068.5f, 158.2f, 1059.0f, 154.5f, 1051.0f, 153.5f, 1032.5f, 152.5f, 1014.0f, 155.7f, 978.3f, 154.5f, 957.5f, 153.3f, 936.7f, 148.0f, 919.7f, 146.5f, 907.5f, 145.0f, 895.3f, 143.5f, 897.0f, 145.5f, 884.5f, 147.5f, 872.0f, 156.8f, 848.5f, 158.5f, 832.5f, 160.2f, 816.5f, 156.2f, 804.5f, 155.5f, 788.5f, 154.8f, 772.5f, 153.7f, 755.2f, 154.5f, 736.5f, 155.3f, 717.8f, 159.5f, 692.3f, 160.5f, 676.5f, 161.5f, 660.7f, 161.0f, 651.3f, 160.5f, 641.5f, 160.0f, 631.7f, 157.7f, 621.7f, 157.5f, 617.5f, 157.3f, 613.3f, 156.5f, 614.2f, 159.5f, 616.5f, 162.5f, 618.8f, 171.5f, 622.5f, 175.5f, 631.5f, 179.5f, 640.5f, 180.5f, 659.5f, 183.5f, 670.5f, 186.5f, 681.5f, 188.3f, 686.3f, 193.5f, 697.5f, 198.7f, 708.7f, 205.7f, 722.7f, 214.5f, 737.5f, 223.3f, 752.3f, 239.3f, 774.7f, 246.5f, 786.5f, 253.7f, 798.3f, 253.5f, 797.2f, 257.5f, 808.5f, 261.5f, 819.8f, 265.8f, 842.7f, 270.5f, 854.5f, 275.2f, 866.3f, 282.3f, 873.7f, 285.5f, 879.5f, 288.7f, 885.3f, 287.5f, 880.2f, 289.5f, 889.5f, 291.5f, 898.8f, 294.8f, 923.7f, 297.5f, 935.5f, 300.2f, 947.3f, 302.0f, 952.3f, 305.5f, 960.5f, 309.0f, 968.7f, 311.2f, 973.3f, 318.5f, 984.5f, 325.8f, 995.7f, 342.5f, 1017.3f, 349.5f, 1027.5f, 356.5f, 1037.7f, 356.0f, 1036.8f, 360.5f, 1045.5f, 365.0f, 1054.2f, 372.8f, 1069.5f, 376.5f, 1079.5f, 380.2f, 1089.5f, 382.0f, 1100.0f, 382.5f, 1105.5f, 383.0f, 1111.0f, 383.3f, 1107.2f, 379.5f, 1112.5f, 375.7f, 1117.8f, 363.3f, 1131.8f, 359.5f, 1137.5f, 355.7f, 1143.2f, 356.7f, 1143.3f, 356.5f, 1146.5f, 356.3f, 1149.7f, 356.2f, 1149.8f, 358.5f, 1156.5f, 360.8f, 1163.2f, 367.7f, 1177.5f, 370.5f, 1186.5f, 373.3f, 1195.5f, 374.5f, 1203.8f, 375.5f, 1210.5f, 376.5f, 1217.2f, 374.8f, 1223.8f, 376.5f, 1226.5f, 378.2f, 1229.2f, 384.2f, 1231.5f, 385.5f, 1226.5f, 386.8f, 1221.5f, 384.3f, 1203.0f, 384.5f, 1196.5f, 384.7f, 1190.0f, 385.3f, 1189.8f, 386.5f, 1187.5f, 387.7f, 1185.2f, 389.3f, 1182.0f, 391.5f, 1182.5f, 393.7f, 1183.0f, 396.8f, 1187.0f, 399.5f, 1190.5f, 402.2f, 1194.0f, 405.2f, 1197.2f, 407.5f, 1203.5f, 409.8f, 1209.8f, 412.7f, 1223.0f, 413.5f, 1228.5f, 414.3f, 1234.0f, 412.0f, 1234.5f, 412.5f, 1236.5f, 413.0f, 1238.5f, 410.2f, 1238.8f, 416.5f, 1240.5f, 422.8f, 1242.2f, 438.3f, 1245.3f, 450.5f, 1246.5f, 462.7f, 1247.7f, 483.0f, 1249.3f, 489.5f, 1247.5f, 496.0f, 1245.7f, 492.7f, 1240.0f, 489.5f, 1235.5f, 486.3f, 1231.0f, 476.7f, 1226.0f, 470.5f, 1220.5f, 464.3f, 1215.0f, 456.8f, 1212.5f, 452.5f, 1202.5f, 448.2f, 1192.5f, 447.8f, 1173.5f, 444.5f, 1160.5f, 441.2f, 1147.5f, 434.7f, 1133.0f, 432.5f, 1124.5f, 430.3f, 1116.0f, 435.5f, 1120.5f, 431.5f, 1109.5f, 427.5f, 1098.5f, 415.3f, 1076.8f, 408.5f, 1058.5f, 401.7f, 1040.2f, 395.5f, 1017.2f, 390.5f, 999.5f, 385.5f, 981.8f, 382.3f, 965.5f, 378.5f, 952.5f, 374.7f, 939.5f, 372.5f, 934.2f, 367.5f, 921.5f, 362.5f, 908.8f, 352.3f, 887.0f, 348.5f, 876.5f, 344.7f, 866.0f, 345.5f, 865.2f, 344.5f, 858.5f, 343.5f, 851.8f, 345.3f, 846.5f, 342.5f, 836.5f, 339.7f, 826.5f, 330.8f, 810.5f, 327.5f, 798.5f, 324.2f, 786.5f, 324.0f, 773.2f, 322.5f, 764.5f, 321.0f, 755.8f, 318.8f, 749.7f, 318.5f, 746.5f, 318.2f, 743.3f, 320.3f, 749.8f, 320.5f, 745.5f, 320.7f, 741.2f, 318.7f, 726.7f, 319.5f, 720.5f, 320.3f, 714.3f, 323.5f, 711.7f, 325.5f, 708.5f, 327.5f, 705.3f, 332.3f, 706.3f, 331.5f, 701.5f, 330.7f, 696.7f, 322.5f, 685.2f, 320.5f, 679.5f, 318.5f, 673.8f, 318.2f, 674.0f, 319.5f, 667.5f, 320.8f, 661.0f, 325.3f, 647.8f, 328.5f, 640.5f, 331.7f, 633.2f, 336.7f, 629.7f, 338.5f, 623.5f, 340.3f, 617.3f, 338.3f, 612.2f, 339.5f, 603.5f, 340.7f, 594.8f, 340.8f, 589.8f, 345.5f, 571.5f, 350.2f, 553.2f, 363.8f, 512.8f, 367.5f, 493.5f, 371.2f, 474.2f, 366.8f, 466.7f, 367.5f, 455.5f, 368.2f, 444.3f, 367.0f, 443.2f, 371.5f, 426.5f, 376.0f, 409.8f, 389.5f, 372.0f, 394.5f, 355.5f, 399.5f, 339.0f, 400.2f, 337.2f, 401.5f, 327.5f, 402.8f, 317.8f, 403.0f, 312.0f, 402.5f, 297.5f, 402.0f, 283.0f, 400.3f, 251.7f, 398.5f, 240.5f, 396.7f, 229.3f, 394.7f, 233.2f, 391.5f, 230.5f, 388.3f, 227.8f, 388.2f, 225.3f, 379.5f, 224.5f, 370.8f, 223.7f, 348.3f, 225.8f, 339.5f, 225.5f, 330.7f, 225.2f, 328.5f, 223.3f, 326.5f, 222.5f, 324.5f, 221.7f, 326.3f, 221.3f, 327.5f, 220.5f, 328.7f, 219.7f, 334.0f, 217.7f, 333.5f, 217.5f, 333.0f, 217.3f, 326.3f, 219.5f, 324.5f, 219.5f, 322.7f, 219.5f, 322.0f, 218.8f, 322.5f, 217.5f, 323.0f, 216.2f, 325.8f, 212.5f, 327.5f, 211.5f, 329.2f, 210.5f, 331.2f, 212.0f, 332.5f, 211.5f, 333.8f, 211.0f, 334.8f, 209.7f, 335.5f, 208.5f, 336.2f, 207.3f, 337.2f, 204.3f, 336.5f, 204.5f, 335.8f, 204.7f, 333.2f, 208.8f, 331.5f, 209.5f, 329.8f, 210.2f, 327.7f, 209.2f, 326.5f, 208.5f, 325.3f, 207.8f, 323.0f, 207.8f, 324.5f, 205.5f, 326.0f, 203.2f, 333.0f, 196.3f, 335.5f, 194.5f, 338.0f, 192.7f, 338.3f, 193.5f, 339.5f, 194.5f, 340.7f, 195.5f, 342.3f, 197.7f, 342.5f, 200.5f, 342.7f, 203.3f, 340.2f, 211.0f, 340.5f, 211.5f, 340.8f, 212.0f, 344.0f, 206.7f, 344.5f, 203.5f, 345.0f, 200.3f, 344.3f, 196.5f, 343.5f, 192.5f, 342.7f, 188.5f, 340.2f, 182.8f, 339.5f, 179.5f, 338.8f, 176.2f, 337.8f, 177.2f, 339.5f, 172.5f, 341.2f, 167.8f, 348.3f, 157.0f, 349.5f, 151.5f, 350.7f, 146.0f, 350.7f, 145.7f, 346.5f, 139.5f, 342.3f, 133.3f, 329.8f, 121.8f, 324.5f, 114.5f, 319.2f, 107.2f, 316.8f, 100.7f, 314.5f, 95.5f, 312.2f, 90.3f, 313.5f, 89.3f, 310.5f, 83.5f, 307.5f, 77.7f, 301.7f, 67.2f, 296.5f, 60.5f, 291.3f, 53.8f, 284.0f, 47.5f, 279.5f, 43.5f, 275.0f, 39.5f, 272.0f, 37.8f, 269.5f, 36.5f, 267.0f, 35.2f, 265.5f, 36.0f, 264.5f, 35.5f, 263.5f, 35.0f, 265.3f, 34.5f, 263.5f, 33.5f, 261.7f, 32.5f, 256.7f, 30.0f, 253.5f, 29.5f, 250.3f, 29.0f, 246.7f, 30.8f, 244.5f, 30.5f, 242.3f, 30.2f, 241.2f, 27.7f, 240.5f, 27.5f, 239.8f, 27.3f, 240.8f, 29.0f, 240.5f, 29.5f, 240.2f, 30.0f, 239.7f, 31.0f, 238.5f, 30.5f, 237.3f, 30.0f, 237.5f, 27.2f, 233.5f, 26.5f, 229.5f, 25.8f, 219.3f, 25.7f, 214.5f, 26.5f,
+		58, 324.5f, 442.5f, 329.3f, 438.2f, 326.3f, 442.3f, 325.5f, 445.5f, 324.7f, 448.7f, 320.5f, 443.8f, 319.5f, 461.5f, 318.5f, 479.2f, 320.0f, 530.8f, 319.5f, 551.5f, 319.0f, 572.2f, 317.8f, 576.2f, 316.5f, 585.5f, 315.2f, 594.8f, 313.0f, 602.3f, 311.5f, 607.5f, 310.0f, 612.7f, 308.8f, 614.3f, 307.5f, 616.5f, 306.2f, 618.7f, 306.5f, 619.0f, 303.5f, 620.5f, 300.5f, 622.0f, 293.3f, 628.7f, 289.5f, 625.5f, 285.7f, 622.3f, 284.0f, 609.5f, 280.5f, 601.5f, 277.0f, 593.5f, 270.5f, 583.0f, 268.5f, 577.5f, 266.5f, 572.0f, 268.0f, 572.0f, 268.5f, 568.5f, 269.0f, 565.0f, 271.0f, 560.3f, 271.5f, 556.5f, 272.0f, 552.7f, 270.5f, 548.7f, 271.5f, 545.5f, 272.5f, 542.3f, 275.7f, 540.7f, 277.5f, 537.5f, 279.3f, 534.3f, 281.0f, 534.0f, 282.5f, 526.5f, 284.0f, 519.0f, 285.0f, 500.3f, 286.5f, 492.5f, 288.0f, 484.7f, 289.8f, 483.0f, 291.5f, 479.5f, 293.2f, 476.0f, 291.0f, 477.7f, 296.5f, 471.5f, 302.0f, 465.3f, 319.7f, 446.8f, 324.5f, 442.5f,
+		22, 183.5f, 379.5f, 184.3f, 380.2f, 185.8f, 381.5f, 186.5f, 387.5f, 187.2f, 393.5f, 187.7f, 410.2f, 187.5f, 415.5f, 187.3f, 420.8f, 186.7f, 418.2f, 185.5f, 419.5f, 184.3f, 420.8f, 181.5f, 426.0f, 180.5f, 423.5f, 179.5f, 421.0f, 179.3f, 411.2f, 179.5f, 404.5f, 179.7f, 397.8f, 180.8f, 387.7f, 181.5f, 383.5f, 182.2f, 379.3f, 182.7f, 378.8f, 183.5f, 379.5f,
+		19, 144.5f, 151.5f, 145.5f, 153.3f, 146.0f, 166.2f, 145.5f, 170.5f, 145.0f, 174.8f, 143.2f, 177.0f, 141.5f, 177.5f, 139.8f, 178.0f, 136.7f, 175.8f, 135.5f, 173.5f, 134.3f, 171.2f, 133.8f, 165.8f, 134.5f, 163.5f, 135.2f, 161.2f, 137.8f, 161.5f, 139.5f, 159.5f, 141.2f, 157.5f, 143.5f, 149.7f, 144.5f, 151.5f,
+		0
+	};
+
+	// 여성 실루엣 3 (사용자 제공 PNG 를 벡터로 변환 - tools/png_to_silhouette.py)
+	// [점 수(시작점 + 베지어 3점씩), x, y, ...] 반복, 0 = 끝  (viewBox 602x1294, PNG 알파 윤곽선 추적)
+	const float kFemale3[] = {
+		775, 286.5f, 26.5f, 283.7f, 27.2f, 283.8f, 28.8f, 281.5f, 29.5f, 279.2f, 30.2f, 276.2f, 29.5f, 272.5f, 30.5f, 268.8f, 31.5f, 264.2f, 34.3f, 259.5f, 35.5f, 254.8f, 36.7f, 248.5f, 36.7f, 244.5f, 37.5f, 240.5f, 38.3f, 238.0f, 39.0f, 235.5f, 40.5f, 233.0f, 42.0f, 232.2f, 41.3f, 229.5f, 46.5f, 226.8f, 51.7f, 223.2f, 65.0f, 219.5f, 71.5f, 215.8f, 78.0f, 209.7f, 82.5f, 207.5f, 85.5f, 205.3f, 88.5f, 207.3f, 88.0f, 206.5f, 89.5f, 205.7f, 91.0f, 204.2f, 91.5f, 202.5f, 94.5f, 200.8f, 97.5f, 197.5f, 104.2f, 196.5f, 107.5f, 195.5f, 110.8f, 196.8f, 113.0f, 196.5f, 114.5f, 196.2f, 116.0f, 195.3f, 116.2f, 194.5f, 116.5f, 193.7f, 116.8f, 192.7f, 115.5f, 191.5f, 116.5f, 190.3f, 117.5f, 189.7f, 121.5f, 187.5f, 122.5f, 185.3f, 123.5f, 182.0f, 121.0f, 178.5f, 122.5f, 175.0f, 124.0f, 171.8f, 128.3f, 166.5f, 131.5f, 161.2f, 134.7f, 160.8f, 135.5f, 146.5f, 141.5f, 132.2f, 147.5f, 94.0f, 161.7f, 80.5f, 167.5f, 67.0f, 173.3f, 71.0f, 172.7f, 65.5f, 176.5f, 60.0f, 180.3f, 53.7f, 186.8f, 47.5f, 190.5f, 41.3f, 194.2f, 32.0f, 196.8f, 28.5f, 198.5f, 25.0f, 200.2f, 27.0f, 199.3f, 26.5f, 200.5f, 26.0f, 201.7f, 25.3f, 202.5f, 25.5f, 205.5f, 25.7f, 208.5f, 24.7f, 214.0f, 27.5f, 218.5f, 30.3f, 223.0f, 34.0f, 226.8f, 42.5f, 232.5f, 51.0f, 238.2f, 68.3f, 247.5f, 78.5f, 252.5f, 88.7f, 257.5f, 93.2f, 258.8f, 103.5f, 262.5f, 113.8f, 266.2f, 128.7f, 271.3f, 140.5f, 274.5f, 152.3f, 277.7f, 164.3f, 280.0f, 174.5f, 281.5f, 184.7f, 283.0f, 195.7f, 282.8f, 201.5f, 283.5f, 207.3f, 284.2f, 207.0f, 284.5f, 209.5f, 285.5f, 212.0f, 286.5f, 212.3f, 285.8f, 216.5f, 289.5f, 220.7f, 293.2f, 230.2f, 301.3f, 234.5f, 307.5f, 238.8f, 313.7f, 240.2f, 321.7f, 242.5f, 326.5f, 244.8f, 331.3f, 246.3f, 330.3f, 248.5f, 336.5f, 250.7f, 342.7f, 253.2f, 355.8f, 255.5f, 363.5f, 257.8f, 371.2f, 260.0f, 377.2f, 262.5f, 382.5f, 265.0f, 387.8f, 269.2f, 390.3f, 270.5f, 395.5f, 271.8f, 400.7f, 269.7f, 408.3f, 270.5f, 413.5f, 271.3f, 418.7f, 275.2f, 423.8f, 275.5f, 426.5f, 275.8f, 429.2f, 273.5f, 427.7f, 272.5f, 429.5f, 271.5f, 431.3f, 277.0f, 433.0f, 269.5f, 437.5f, 262.0f, 442.0f, 236.2f, 452.2f, 227.5f, 456.5f, 218.8f, 460.8f, 221.5f, 459.8f, 217.5f, 463.5f, 213.5f, 467.2f, 208.8f, 474.7f, 203.5f, 478.5f, 198.2f, 482.3f, 192.8f, 482.2f, 185.5f, 486.5f, 178.2f, 490.8f, 166.3f, 499.0f, 159.5f, 504.5f, 152.7f, 510.0f, 148.7f, 514.7f, 144.5f, 519.5f, 140.3f, 524.3f, 138.2f, 526.5f, 134.5f, 533.5f, 130.8f, 540.5f, 125.2f, 553.2f, 122.5f, 561.5f, 119.8f, 569.8f, 119.0f, 576.0f, 118.5f, 583.5f, 118.0f, 591.0f, 117.8f, 595.5f, 119.5f, 606.5f, 121.2f, 617.5f, 126.0f, 633.5f, 128.5f, 649.5f, 131.0f, 665.5f, 130.8f, 683.3f, 134.5f, 702.5f, 138.2f, 721.7f, 146.5f, 750.2f, 150.5f, 764.5f, 154.5f, 778.8f, 156.2f, 779.0f, 158.5f, 788.5f, 160.8f, 798.0f, 163.7f, 810.5f, 164.5f, 821.5f, 165.3f, 832.5f, 165.3f, 840.8f, 163.5f, 854.5f, 161.7f, 868.2f, 155.7f, 891.3f, 153.5f, 903.5f, 151.3f, 915.7f, 150.8f, 918.2f, 150.5f, 927.5f, 150.2f, 936.8f, 149.7f, 948.2f, 151.5f, 959.5f, 153.3f, 970.8f, 152.5f, 974.2f, 161.5f, 995.5f, 170.5f, 1016.8f, 196.8f, 1067.2f, 205.5f, 1087.5f, 214.2f, 1107.8f, 212.2f, 1111.7f, 213.5f, 1117.5f, 214.8f, 1123.3f, 213.8f, 1121.3f, 213.5f, 1122.5f, 213.2f, 1123.7f, 211.8f, 1122.8f, 211.5f, 1124.5f, 211.2f, 1126.2f, 214.0f, 1126.8f, 211.5f, 1132.5f, 209.0f, 1138.2f, 199.3f, 1153.2f, 196.5f, 1158.5f, 193.7f, 1163.8f, 194.8f, 1162.2f, 194.5f, 1164.5f, 194.2f, 1166.8f, 192.5f, 1167.8f, 194.5f, 1172.5f, 196.5f, 1177.2f, 203.2f, 1186.0f, 206.5f, 1192.5f, 209.8f, 1199.0f, 212.3f, 1202.2f, 214.5f, 1211.5f, 216.7f, 1220.8f, 217.8f, 1242.3f, 219.5f, 1248.5f, 221.2f, 1254.7f, 223.3f, 1248.8f, 224.5f, 1248.5f, 225.7f, 1248.2f, 226.0f, 1249.8f, 226.5f, 1246.5f, 227.0f, 1243.2f, 227.0f, 1231.0f, 227.5f, 1228.5f, 228.0f, 1226.0f, 228.7f, 1227.2f, 229.5f, 1231.5f, 230.3f, 1235.8f, 231.5f, 1250.0f, 232.5f, 1254.5f, 233.5f, 1259.0f, 233.8f, 1257.2f, 235.5f, 1258.5f, 237.2f, 1259.8f, 239.3f, 1261.3f, 242.5f, 1262.5f, 245.7f, 1263.7f, 247.7f, 1264.5f, 254.5f, 1265.5f, 261.3f, 1266.5f, 275.2f, 1268.2f, 283.5f, 1268.5f, 291.8f, 1268.8f, 298.8f, 1268.2f, 304.5f, 1267.5f, 310.2f, 1266.8f, 315.3f, 1267.5f, 317.5f, 1264.5f, 319.7f, 1261.5f, 319.5f, 1253.5f, 317.5f, 1249.5f, 315.5f, 1245.5f, 307.8f, 1243.2f, 305.5f, 1240.5f, 303.2f, 1237.8f, 305.7f, 1236.2f, 303.5f, 1233.5f, 301.3f, 1230.8f, 294.8f, 1227.2f, 292.5f, 1224.5f, 290.2f, 1221.8f, 290.8f, 1219.3f, 289.5f, 1217.5f, 288.2f, 1215.7f, 285.7f, 1214.8f, 284.5f, 1213.5f, 283.3f, 1212.2f, 285.5f, 1220.7f, 282.5f, 1209.5f, 279.5f, 1198.3f, 269.5f, 1160.0f, 266.5f, 1146.5f, 263.5f, 1133.0f, 268.3f, 1138.7f, 264.5f, 1128.5f, 260.7f, 1118.3f, 248.2f, 1096.3f, 243.5f, 1085.5f, 238.8f, 1074.7f, 238.7f, 1072.5f, 236.5f, 1063.5f, 234.3f, 1054.5f, 232.0f, 1046.2f, 230.5f, 1031.5f, 229.0f, 1016.8f, 229.3f, 993.7f, 227.5f, 975.5f, 225.7f, 957.3f, 220.8f, 934.3f, 219.5f, 922.5f, 218.2f, 910.7f, 219.0f, 910.2f, 219.5f, 904.5f, 220.0f, 898.8f, 221.0f, 893.8f, 222.5f, 888.5f, 224.0f, 883.2f, 226.5f, 879.3f, 228.5f, 872.5f, 230.5f, 865.7f, 233.3f, 859.2f, 234.5f, 847.5f, 235.7f, 835.8f, 233.8f, 821.8f, 235.5f, 802.5f, 237.2f, 783.2f, 242.8f, 747.2f, 244.5f, 731.5f, 246.2f, 715.8f, 245.0f, 713.2f, 245.5f, 708.5f, 246.0f, 703.8f, 242.7f, 695.5f, 247.5f, 703.5f, 252.3f, 711.5f, 266.0f, 742.0f, 274.5f, 756.5f, 283.0f, 771.0f, 291.3f, 781.0f, 298.5f, 790.5f, 305.7f, 800.0f, 312.3f, 806.3f, 317.5f, 813.5f, 322.7f, 820.7f, 325.7f, 823.8f, 329.5f, 833.5f, 333.3f, 843.2f, 336.2f, 860.3f, 340.5f, 871.5f, 344.8f, 882.7f, 352.5f, 894.2f, 355.5f, 900.5f, 358.5f, 906.8f, 356.5f, 899.2f, 358.5f, 909.5f, 360.5f, 919.8f, 364.8f, 950.3f, 367.5f, 962.5f, 370.2f, 974.7f, 372.0f, 976.5f, 374.5f, 982.5f, 377.0f, 988.5f, 374.8f, 987.7f, 382.5f, 998.5f, 390.2f, 1009.3f, 411.5f, 1035.2f, 420.5f, 1047.5f, 429.5f, 1059.8f, 431.8f, 1064.5f, 436.5f, 1072.5f, 441.2f, 1080.5f, 446.0f, 1090.2f, 448.5f, 1095.5f, 451.0f, 1100.8f, 451.3f, 1100.7f, 451.5f, 1104.5f, 451.7f, 1108.3f, 452.8f, 1112.3f, 449.5f, 1118.5f, 446.2f, 1124.7f, 435.7f, 1134.5f, 431.5f, 1141.5f, 427.3f, 1148.5f, 422.5f, 1150.5f, 424.5f, 1160.5f, 426.5f, 1170.5f, 439.5f, 1190.7f, 443.5f, 1201.5f, 447.5f, 1212.3f, 447.7f, 1218.3f, 448.5f, 1225.5f, 449.3f, 1232.7f, 447.5f, 1241.2f, 448.5f, 1244.5f, 449.5f, 1247.8f, 453.5f, 1252.0f, 454.5f, 1245.5f, 455.5f, 1239.0f, 454.0f, 1214.3f, 454.5f, 1205.5f, 455.0f, 1196.7f, 456.2f, 1195.3f, 457.5f, 1192.5f, 458.8f, 1189.7f, 460.7f, 1188.7f, 462.5f, 1188.5f, 464.3f, 1188.3f, 465.2f, 1188.3f, 468.5f, 1191.5f, 471.8f, 1194.7f, 478.8f, 1202.3f, 482.5f, 1207.5f, 486.2f, 1212.7f, 488.2f, 1216.8f, 490.5f, 1222.5f, 492.8f, 1228.2f, 494.3f, 1236.5f, 496.5f, 1241.5f, 498.7f, 1246.5f, 499.5f, 1250.2f, 503.5f, 1252.5f, 507.5f, 1254.8f, 513.2f, 1255.0f, 520.5f, 1255.5f, 527.8f, 1256.0f, 539.0f, 1255.8f, 547.5f, 1255.5f, 556.0f, 1255.2f, 566.7f, 1254.2f, 571.5f, 1253.5f, 576.3f, 1252.8f, 575.7f, 1252.8f, 576.5f, 1251.5f, 577.3f, 1250.2f, 577.0f, 1246.8f, 576.5f, 1245.5f, 576.0f, 1244.2f, 574.2f, 1244.5f, 573.5f, 1243.5f, 572.8f, 1242.5f, 574.3f, 1241.8f, 572.5f, 1239.5f, 570.7f, 1237.2f, 565.5f, 1231.8f, 562.5f, 1229.5f, 559.5f, 1227.2f, 557.5f, 1227.5f, 554.5f, 1225.5f, 551.5f, 1223.5f, 547.3f, 1220.2f, 544.5f, 1217.5f, 541.7f, 1214.8f, 539.3f, 1210.8f, 537.5f, 1209.5f, 535.7f, 1208.2f, 534.7f, 1210.3f, 533.5f, 1209.5f, 532.3f, 1208.7f, 532.3f, 1211.5f, 530.5f, 1204.5f, 528.7f, 1197.5f, 526.2f, 1179.8f, 522.5f, 1167.5f, 518.8f, 1155.2f, 510.7f, 1137.5f, 508.5f, 1130.5f, 506.3f, 1123.5f, 509.7f, 1127.7f, 509.5f, 1125.5f, 509.3f, 1123.3f, 508.3f, 1119.3f, 507.5f, 1117.5f, 506.7f, 1115.7f, 506.8f, 1118.3f, 504.5f, 1114.5f, 502.2f, 1110.7f, 497.5f, 1102.7f, 493.5f, 1094.5f, 489.5f, 1086.3f, 484.8f, 1076.3f, 480.5f, 1065.5f, 476.2f, 1054.7f, 470.0f, 1035.7f, 467.5f, 1029.5f, 465.0f, 1023.3f, 466.2f, 1030.3f, 465.5f, 1028.5f, 464.8f, 1026.7f, 464.2f, 1020.3f, 463.5f, 1018.5f, 462.8f, 1016.7f, 462.3f, 1019.8f, 461.5f, 1017.5f, 460.7f, 1015.2f, 459.5f, 1007.5f, 458.5f, 1004.5f, 457.5f, 1001.5f, 456.0f, 1001.2f, 455.5f, 999.5f, 455.0f, 997.8f, 456.8f, 999.7f, 455.5f, 994.5f, 454.2f, 989.3f, 453.3f, 984.0f, 447.5f, 968.5f, 441.7f, 953.0f, 425.3f, 914.2f, 420.5f, 901.5f, 415.7f, 888.8f, 419.3f, 900.7f, 418.5f, 892.5f, 417.7f, 884.3f, 416.5f, 860.8f, 415.5f, 852.5f, 414.5f, 844.2f, 414.3f, 846.5f, 412.5f, 842.5f, 410.7f, 838.5f, 406.7f, 833.0f, 404.5f, 828.5f, 402.3f, 824.0f, 401.3f, 823.5f, 399.5f, 815.5f, 397.7f, 807.5f, 394.2f, 786.7f, 393.5f, 780.5f, 392.8f, 774.3f, 395.2f, 780.3f, 395.5f, 778.5f, 395.8f, 776.7f, 395.8f, 772.0f, 395.5f, 769.5f, 395.2f, 767.0f, 393.7f, 766.5f, 393.5f, 763.5f, 393.3f, 760.5f, 393.3f, 756.7f, 394.5f, 751.5f, 395.7f, 746.3f, 398.8f, 736.7f, 400.5f, 732.5f, 402.2f, 728.3f, 403.8f, 728.0f, 404.5f, 726.5f, 405.2f, 725.0f, 406.5f, 725.8f, 404.5f, 723.5f, 402.5f, 721.2f, 395.2f, 716.7f, 392.5f, 712.5f, 389.8f, 708.3f, 388.5f, 703.5f, 388.5f, 698.5f, 388.5f, 693.5f, 389.7f, 689.5f, 392.5f, 682.5f, 395.3f, 675.5f, 402.8f, 662.5f, 405.5f, 656.5f, 408.2f, 650.5f, 408.3f, 651.2f, 408.5f, 646.5f, 408.7f, 641.8f, 406.7f, 634.3f, 406.5f, 628.5f, 406.3f, 622.7f, 406.5f, 619.0f, 407.5f, 611.5f, 408.5f, 604.0f, 410.5f, 592.2f, 412.5f, 583.5f, 414.5f, 574.8f, 418.5f, 563.8f, 419.5f, 559.5f, 420.5f, 555.2f, 418.3f, 558.2f, 418.5f, 557.5f, 418.7f, 556.8f, 418.7f, 562.2f, 420.5f, 555.5f, 422.3f, 548.8f, 428.0f, 528.5f, 429.5f, 517.5f, 431.0f, 506.5f, 429.8f, 496.7f, 429.5f, 489.5f, 429.2f, 482.3f, 427.5f, 480.7f, 427.5f, 474.5f, 427.5f, 468.3f, 428.0f, 460.2f, 429.5f, 452.5f, 431.0f, 444.8f, 435.0f, 432.8f, 436.5f, 428.5f, 438.0f, 424.2f, 436.3f, 427.3f, 438.5f, 426.5f, 440.7f, 425.7f, 446.3f, 425.2f, 449.5f, 423.5f, 452.7f, 421.8f, 454.7f, 418.3f, 457.5f, 416.5f, 460.3f, 414.7f, 463.7f, 414.5f, 466.5f, 412.5f, 469.3f, 410.5f, 472.2f, 407.5f, 474.5f, 404.5f, 476.8f, 401.5f, 478.5f, 398.7f, 480.5f, 394.5f, 482.5f, 390.3f, 485.3f, 383.7f, 486.5f, 379.5f, 487.7f, 375.3f, 488.2f, 372.2f, 487.5f, 369.5f, 486.8f, 366.8f, 485.2f, 367.8f, 482.5f, 363.5f, 479.8f, 359.2f, 474.2f, 347.5f, 471.5f, 343.5f, 468.8f, 339.5f, 467.7f, 341.0f, 466.5f, 339.5f, 465.3f, 338.0f, 466.5f, 337.0f, 464.5f, 334.5f, 462.5f, 332.0f, 456.2f, 335.8f, 454.5f, 324.5f, 452.8f, 313.2f, 454.7f, 277.3f, 454.5f, 266.5f, 454.3f, 255.7f, 454.5f, 262.5f, 453.5f, 259.5f, 452.5f, 256.5f, 450.2f, 251.2f, 448.5f, 248.5f, 446.8f, 245.8f, 445.8f, 245.0f, 443.5f, 243.5f, 441.2f, 242.0f, 441.5f, 240.2f, 434.5f, 239.5f, 427.5f, 238.8f, 409.0f, 239.8f, 401.5f, 239.5f, 394.0f, 239.2f, 393.3f, 238.5f, 389.5f, 237.5f, 385.7f, 236.5f, 381.5f, 234.8f, 378.5f, 233.5f, 375.5f, 232.2f, 373.8f, 231.3f, 371.5f, 229.5f, 369.2f, 227.7f, 366.7f, 225.7f, 364.5f, 222.5f, 362.3f, 219.3f, 359.3f, 212.8f, 358.5f, 210.5f, 357.7f, 208.2f, 358.0f, 208.8f, 359.5f, 208.5f, 361.0f, 208.2f, 365.5f, 208.8f, 367.5f, 208.5f, 369.5f, 208.2f, 370.7f, 206.5f, 371.5f, 206.5f, 372.3f, 206.5f, 372.8f, 207.8f, 372.5f, 208.5f, 372.2f, 209.2f, 369.7f, 209.5f, 369.5f, 210.5f, 369.3f, 211.5f, 369.7f, 215.2f, 371.5f, 214.5f, 373.3f, 213.8f, 378.3f, 209.5f, 380.5f, 206.5f, 382.7f, 203.5f, 383.2f, 197.7f, 384.5f, 196.5f, 385.8f, 195.3f, 387.5f, 199.5f, 388.5f, 199.5f, 389.5f, 199.5f, 388.7f, 197.0f, 390.5f, 196.5f, 392.3f, 196.0f, 399.0f, 197.0f, 399.5f, 196.5f, 400.0f, 196.0f, 394.3f, 194.7f, 393.5f, 193.5f, 392.7f, 192.3f, 394.8f, 191.2f, 394.5f, 189.5f, 394.2f, 187.8f, 391.8f, 186.0f, 391.5f, 183.5f, 391.2f, 181.0f, 390.7f, 179.5f, 392.5f, 174.5f, 394.3f, 169.5f, 400.2f, 157.5f, 402.5f, 153.5f, 404.8f, 149.5f, 405.2f, 152.3f, 406.5f, 150.5f, 407.8f, 148.7f, 409.3f, 144.2f, 410.5f, 142.5f, 411.7f, 140.8f, 412.5f, 140.0f, 413.5f, 140.5f, 414.5f, 141.0f, 416.3f, 147.5f, 416.5f, 145.5f, 416.7f, 143.5f, 415.8f, 132.2f, 414.5f, 128.5f, 413.2f, 124.8f, 409.5f, 124.7f, 408.5f, 123.5f, 407.5f, 122.3f, 409.5f, 122.8f, 408.5f, 121.5f, 407.5f, 120.2f, 403.8f, 116.5f, 402.5f, 115.5f, 401.2f, 114.5f, 402.0f, 116.7f, 400.5f, 115.5f, 399.0f, 114.3f, 394.7f, 110.0f, 393.5f, 108.5f, 392.3f, 107.0f, 395.8f, 110.0f, 393.5f, 106.5f, 391.2f, 103.0f, 382.8f, 93.3f, 379.5f, 87.5f, 376.2f, 81.7f, 375.2f, 74.7f, 373.5f, 71.5f, 371.8f, 68.3f, 370.7f, 70.2f, 369.5f, 68.5f, 368.3f, 66.8f, 368.8f, 64.7f, 366.5f, 61.5f, 364.2f, 58.3f, 358.3f, 52.0f, 355.5f, 49.5f, 352.7f, 47.0f, 350.7f, 47.3f, 349.5f, 46.5f, 348.3f, 45.7f, 349.5f, 45.0f, 348.5f, 44.5f, 347.5f, 44.0f, 346.0f, 45.0f, 343.5f, 43.5f, 341.0f, 42.0f, 336.3f, 37.2f, 333.5f, 35.5f, 330.7f, 33.8f, 329.5f, 33.7f, 326.5f, 33.5f, 323.5f, 33.3f, 320.2f, 35.8f, 315.5f, 34.5f, 310.8f, 33.2f, 303.3f, 26.8f, 298.5f, 25.5f, 293.7f, 24.2f, 289.3f, 25.8f, 286.5f, 26.5f,
+		55, 380.5f, 488.5f, 381.5f, 488.3f, 382.0f, 487.8f, 381.5f, 491.5f, 381.0f, 495.2f, 378.2f, 502.5f, 377.5f, 510.5f, 376.8f, 518.5f, 376.8f, 528.5f, 377.5f, 539.5f, 378.2f, 550.5f, 381.0f, 563.7f, 381.5f, 576.5f, 382.0f, 589.3f, 381.2f, 606.5f, 380.5f, 616.5f, 379.8f, 626.5f, 378.5f, 631.8f, 377.5f, 636.5f, 376.5f, 641.2f, 377.3f, 641.5f, 374.5f, 644.5f, 371.7f, 647.5f, 363.2f, 653.2f, 360.5f, 654.5f, 357.8f, 655.8f, 360.7f, 657.8f, 358.5f, 652.5f, 356.3f, 647.2f, 351.8f, 632.3f, 347.5f, 622.5f, 343.2f, 612.7f, 335.2f, 599.5f, 332.5f, 593.5f, 329.8f, 587.5f, 330.3f, 590.7f, 331.5f, 586.5f, 332.7f, 582.3f, 337.8f, 573.0f, 339.5f, 568.5f, 341.2f, 564.0f, 339.0f, 564.2f, 341.5f, 559.5f, 344.0f, 554.8f, 350.8f, 548.3f, 354.5f, 540.5f, 358.2f, 532.7f, 360.0f, 520.5f, 363.5f, 512.5f, 367.0f, 504.5f, 372.7f, 496.5f, 375.5f, 492.5f, 378.3f, 488.5f, 379.5f, 488.7f, 380.5f, 488.5f,
+		154, 109.5f, 210.5f, 112.3f, 206.5f, 121.7f, 194.5f, 127.5f, 188.5f, 133.3f, 182.5f, 137.2f, 179.2f, 144.5f, 174.5f, 151.8f, 169.8f, 165.2f, 163.5f, 171.5f, 160.5f, 177.8f, 157.5f, 179.7f, 157.2f, 182.5f, 156.5f, 185.3f, 155.8f, 187.3f, 154.0f, 188.5f, 156.5f, 189.7f, 159.0f, 189.0f, 168.0f, 189.5f, 171.5f, 190.0f, 175.0f, 190.5f, 176.0f, 191.5f, 177.5f, 192.5f, 179.0f, 194.8f, 179.7f, 195.5f, 180.5f, 196.2f, 181.3f, 194.0f, 182.5f, 195.5f, 182.5f, 197.0f, 182.5f, 202.3f, 179.0f, 204.5f, 180.5f, 206.7f, 182.0f, 207.0f, 188.8f, 208.5f, 191.5f, 210.0f, 194.2f, 211.3f, 195.7f, 213.5f, 196.5f, 215.7f, 197.3f, 220.0f, 196.2f, 221.5f, 196.5f, 223.0f, 196.8f, 220.7f, 197.8f, 222.5f, 198.5f, 224.3f, 199.2f, 230.5f, 199.8f, 232.5f, 200.5f, 234.5f, 201.2f, 234.8f, 201.3f, 234.5f, 202.5f, 234.2f, 203.7f, 232.0f, 206.5f, 230.5f, 207.5f, 229.0f, 208.5f, 226.2f, 208.0f, 225.5f, 208.5f, 224.8f, 209.0f, 224.5f, 210.3f, 226.5f, 210.5f, 228.5f, 210.7f, 235.3f, 209.2f, 237.5f, 209.5f, 239.7f, 209.8f, 238.7f, 212.2f, 239.5f, 212.5f, 240.3f, 212.8f, 241.0f, 211.2f, 242.5f, 211.5f, 244.0f, 211.8f, 246.3f, 214.0f, 248.5f, 214.5f, 250.7f, 215.0f, 254.2f, 214.2f, 255.5f, 214.5f, 256.8f, 214.8f, 256.7f, 215.7f, 256.5f, 216.5f, 256.3f, 217.3f, 253.8f, 218.7f, 254.5f, 219.5f, 255.2f, 220.3f, 258.7f, 221.3f, 260.5f, 221.5f, 262.3f, 221.7f, 264.0f, 221.2f, 265.5f, 220.5f, 267.0f, 219.8f, 267.8f, 217.5f, 269.5f, 217.5f, 271.2f, 217.5f, 273.2f, 220.2f, 275.5f, 220.5f, 277.8f, 220.8f, 280.5f, 221.3f, 283.5f, 219.5f, 286.5f, 217.7f, 291.7f, 210.2f, 293.5f, 209.5f, 295.3f, 208.8f, 294.7f, 213.8f, 294.5f, 215.5f, 294.3f, 217.2f, 292.5f, 218.8f, 292.5f, 219.5f, 292.5f, 220.2f, 293.0f, 220.5f, 294.5f, 219.5f, 296.0f, 218.5f, 300.0f, 214.3f, 301.5f, 213.5f, 303.0f, 212.7f, 303.5f, 213.2f, 303.5f, 214.5f, 303.5f, 215.8f, 302.8f, 219.3f, 301.5f, 221.5f, 300.2f, 223.7f, 298.0f, 225.8f, 295.5f, 227.5f, 293.0f, 229.2f, 289.7f, 230.7f, 286.5f, 231.5f, 283.3f, 232.3f, 278.8f, 232.7f, 276.5f, 232.5f, 274.2f, 232.3f, 274.2f, 230.8f, 272.5f, 230.5f, 270.8f, 230.2f, 271.2f, 232.2f, 266.5f, 230.5f, 261.8f, 228.8f, 250.3f, 222.5f, 244.5f, 220.5f, 238.7f, 218.5f, 237.2f, 218.8f, 231.5f, 218.5f, 225.8f, 218.2f, 217.8f, 217.7f, 210.5f, 218.5f, 203.2f, 219.3f, 193.0f, 222.7f, 187.5f, 223.5f, 182.0f, 224.3f, 184.7f, 225.0f, 177.5f, 223.5f, 170.3f, 222.0f, 155.7f, 216.3f, 144.5f, 214.5f, 133.3f, 212.7f, 116.3f, 213.2f, 110.5f, 212.5f, 104.7f, 211.8f, 106.7f, 214.5f, 109.5f, 210.5f,
+		0
+	};
+
+	// 남성 실루엣 1 (사용자 제공 SVG, viewBox 850x1250)
+	// 1개 도형: [점 수(시작점 + 베지어 3점씩), x, y, ...] 반복, 0 = 끝  (viewBox 850x1250)
+	const float kMale1[] = {
+		379, 649.17f, 636.66f, 648.63f, 621.37f, 643.74f, 603.73f, 643.57f, 589.75f, 643.29f, 567.03f, 647.88f, 546.44f, 647.77f, 523.23f, 647.64f, 495.96f, 646.19f, 466.91f, 640.71f, 443.40f, 629.72f, 396.16f, 611.18f, 354.75f, 594.55f, 312.49f, 590.64f, 302.56f, 585.95f, 292.39f, 580.55f, 282.38f, 577.52f, 276.76f, 575.55f, 270.58f, 573.16f, 265.67f, 573.16f, 265.67f, 570.86f, 261.55f, 569.92f, 260.43f, 563.48f, 251.04f, 555.58f, 242.70f, 545.66f, 238.97f, 540.61f, 237.07f, 532.04f, 237.79f, 526.75f, 236.87f, 517.92f, 235.34f, 506.06f, 227.32f, 495.94f, 222.80f, 487.64f, 219.09f, 469.31f, 211.46f, 467.24f, 206.00f, 464.87f, 199.76f, 464.88f, 186.18f, 466.54f, 175.96f, 467.03f, 172.96f, 467.71f, 168.73f, 468.64f, 165.59f, 469.99f, 161.00f, 471.31f, 156.47f, 472.15f, 154.95f, 474.28f, 151.09f, 480.30f, 149.60f, 481.95f, 145.85f, 485.86f, 137.01f, 485.43f, 118.05f, 482.65f, 112.24f, 482.15f, 93.95f, 483.44f, 79.62f, 478.45f, 67.43f, 475.61f, 60.47f, 465.67f, 49.03f, 455.95f, 43.75f, 446.72f, 38.73f, 432.86f, 36.39f, 432.86f, 36.39f, 420.14f, 34.69f, 407.80f, 35.78f, 394.31f, 43.63f, 387.46f, 47.62f, 375.45f, 60.48f, 372.61f, 67.44f, 367.62f, 79.63f, 368.91f, 93.96f, 368.41f, 112.25f, 365.63f, 118.06f, 365.20f, 137.02f, 369.11f, 145.86f, 370.77f, 149.61f, 376.78f, 151.10f, 378.91f, 154.96f, 379.75f, 156.48f, 380.98f, 159.17f, 382.33f, 163.76f, 383.26f, 166.90f, 384.02f, 172.96f, 384.51f, 175.96f, 386.17f, 186.18f, 386.18f, 201.23f, 383.81f, 207.47f, 381.73f, 212.93f, 363.40f, 220.56f, 355.10f, 224.27f, 344.98f, 228.79f, 333.12f, 235.34f, 324.29f, 236.87f, 319.01f, 237.79f, 310.44f, 237.07f, 305.39f, 238.97f, 288.09f, 245.47f, 276.86f, 266.01f, 268.98f, 281.68f, 263.75f, 292.08f, 247.35f, 334.83f, 243.07f, 347.50f, 240.04f, 356.48f, 228.06f, 396.20f, 225.57f, 405.61f, 223.54f, 413.29f, 223.48f, 421.19f, 221.37f, 428.72f, 219.10f, 436.83f, 214.07f, 444.43f, 212.27f, 452.53f, 209.83f, 463.53f, 208.95f, 477.13f, 207.37f, 490.34f, 202.75f, 529.09f, 207.52f, 577.50f, 203.87f, 615.67f, 201.86f, 636.70f, 194.96f, 662.27f, 211.87f, 667.87f, 227.38f, 673.00f, 264.43f, 682.69f, 258.48f, 658.38f, 263.07f, 656.43f, 270.46f, 657.30f, 272.48f, 652.78f, 272.65f, 642.46f, 272.37f, 635.97f, 268.28f, 628.97f, 262.17f, 618.52f, 246.31f, 616.28f, 243.07f, 605.16f, 241.42f, 599.49f, 241.60f, 591.86f, 241.67f, 586.26f, 241.84f, 572.44f, 244.77f, 557.94f, 247.27f, 544.25f, 249.67f, 531.11f, 256.23f, 519.02f, 258.47f, 507.14f, 262.16f, 487.61f, 258.42f, 466.82f, 264.07f, 449.73f, 267.66f, 438.87f, 274.63f, 427.85f, 279.47f, 417.52f, 289.72f, 395.66f, 297.05f, 377.45f, 309.58f, 360.81f, 310.27f, 369.47f, 316.89f, 377.18f, 319.38f, 386.02f, 321.78f, 394.52f, 323.98f, 405.69f, 325.55f, 416.64f, 327.86f, 432.72f, 331.16f, 448.09f, 330.58f, 465.84f, 330.16f, 478.64f, 326.72f, 489.69f, 324.57f, 501.85f, 322.84f, 511.64f, 321.08f, 521.20f, 318.67f, 530.25f, 315.44f, 542.45f, 310.93f, 554.94f, 308.67f, 566.64f, 302.88f, 596.64f, 298.07f, 627.94f, 296.26f, 661.88f, 294.12f, 702.13f, 294.63f, 737.46f, 298.36f, 776.00f, 300.04f, 793.32f, 305.97f, 811.41f, 306.06f, 829.91f, 306.10f, 838.41f, 302.65f, 848.31f, 302.56f, 857.92f, 302.50f, 863.77f, 303.18f, 870.22f, 302.61f, 875.44f, 301.80f, 882.86f, 298.22f, 891.02f, 295.56f, 898.52f, 292.73f, 906.48f, 289.31f, 914.51f, 287.16f, 922.33f, 277.39f, 957.75f, 282.96f, 1003.25f, 282.96f, 1044.86f, 282.96f, 1055.67f, 284.94f, 1067.66f, 283.66f, 1077.77f, 283.12f, 1082.07f, 280.70f, 1086.94f, 279.46f, 1091.77f, 275.47f, 1107.28f, 272.21f, 1115.85f, 261.96f, 1125.38f, 254.99f, 1131.85f, 245.71f, 1136.98f, 236.06f, 1143.58f, 227.83f, 1149.20f, 213.90f, 1156.73f, 212.25f, 1163.88f, 211.62f, 1166.63f, 210.18f, 1171.63f, 212.95f, 1177.18f, 214.65f, 1180.59f, 217.57f, 1181.86f, 220.65f, 1184.12f, 224.92f, 1187.25f, 232.04f, 1189.93f, 233.25f, 1190.49f, 238.43f, 1192.87f, 246.91f, 1191.38f, 251.45f, 1189.09f, 259.59f, 1184.98f, 267.78f, 1174.65f, 276.66f, 1166.68f, 285.30f, 1158.93f, 294.17f, 1148.86f, 301.87f, 1144.28f, 306.15f, 1141.73f, 310.89f, 1141.16f, 312.37f, 1138.68f, 315.50f, 1133.44f, 314.69f, 1117.68f, 315.17f, 1109.98f, 315.81f, 1099.65f, 315.96f, 1088.56f, 317.97f, 1080.57f, 319.67f, 1073.82f, 323.06f, 1068.14f, 325.05f, 1061.27f, 325.97f, 1058.11f, 326.84f, 1054.32f, 327.77f, 1051.16f, 334.33f, 1028.85f, 347.61f, 1007.74f, 354.38f, 984.64f, 357.35f, 974.49f, 359.24f, 963.52f, 360.68f, 953.13f, 362.69f, 938.65f, 359.71f, 923.08f, 362.78f, 906.92f, 365.91f, 890.45f, 375.13f, 874.36f, 378.88f, 857.20f, 380.95f, 847.76f, 381.47f, 837.99f, 383.08f, 828.50f, 390.24f, 786.27f, 402.93f, 745.93f, 413.19f, 708.77f, 414.28f, 704.81f, 415.79f, 699.53f, 418.09f, 696.87f, 429.96f, 724.64f, 435.39f, 754.89f, 441.90f, 786.49f, 445.13f, 802.18f, 448.04f, 818.71f, 450.30f, 834.80f, 452.67f, 851.71f, 452.68f, 868.75f, 457.30f, 884.51f, 461.05f, 897.30f, 468.90f, 908.69f, 471.30f, 921.62f, 475.15f, 942.37f, 470.54f, 965.40f, 475.50f, 986.03f, 479.64f, 1003.28f, 487.75f, 1020.26f, 493.70f, 1037.14f, 499.88f, 1054.67f, 507.55f, 1072.33f, 511.90f, 1088.95f, 514.84f, 1100.17f, 512.77f, 1112.72f, 514.70f, 1126.06f, 515.59f, 1132.21f, 519.32f, 1135.49f, 520.40f, 1140.71f, 521.13f, 1144.22f, 520.78f, 1150.87f, 521.70f, 1155.46f, 523.34f, 1163.68f, 531.01f, 1175.65f, 536.40f, 1186.97f, 539.41f, 1193.30f, 547.12f, 1210.79f, 554.21f, 1214.95f, 561.48f, 1219.21f, 584.75f, 1217.85f, 589.61f, 1215.67f, 594.99f, 1213.27f, 602.77f, 1202.10f, 602.91f, 1197.47f, 603.04f, 1193.32f, 599.33f, 1187.81f, 597.31f, 1183.47f, 590.26f, 1168.34f, 584.07f, 1161.12f, 573.50f, 1150.56f, 568.94f, 1146.00f, 558.82f, 1135.85f, 556.70f, 1130.96f, 552.76f, 1121.92f, 551.13f, 1108.00f, 550.40f, 1095.96f, 548.17f, 1059.09f, 556.76f, 1012.83f, 554.60f, 976.93f, 553.36f, 956.37f, 548.81f, 938.96f, 543.40f, 923.72f, 540.39f, 915.25f, 535.46f, 906.99f, 534.30f, 898.51f, 532.80f, 887.56f, 533.82f, 874.98f, 532.90f, 862.11f, 530.30f, 825.79f, 536.19f, 798.73f, 539.90f, 766.89f, 545.69f, 717.13f, 546.90f, 664.69f, 542.70f, 613.56f, 541.92f, 604.01f, 541.07f, 594.03f, 538.50f, 584.85f, 535.35f, 573.60f, 525.28f, 491.81f, 528.00f, 472.12f, 530.54f, 453.66f, 532.32f, 434.59f, 535.00f, 416.81f, 537.66f, 399.18f, 539.57f, 381.49f, 546.90f, 366.40f, 557.14f, 377.52f, 563.23f, 394.64f, 570.71f, 411.91f, 577.62f, 427.87f, 588.42f, 443.53f, 593.11f, 459.52f, 596.64f, 471.56f, 593.18f, 492.43f, 594.51f, 505.03f, 595.53f, 514.69f, 598.48f, 525.64f, 600.11f, 536.54f, 601.75f, 547.46f, 604.29f, 558.46f, 605.01f, 568.75f, 605.75f, 579.35f, 608.53f, 605.38f, 605.71f, 615.66f, 603.20f, 624.80f, 586.69f, 630.37f, 584.71f, 641.57f, 582.11f, 656.20f, 586.56f, 667.58f, 592.65f, 676.57f, 595.05f, 680.11f, 604.33f, 680.15f, 608.05f, 679.96f, 612.41f, 679.74f, 616.98f, 678.97f, 621.12f, 678.68f, 623.68f, 678.49f, 630.87f, 678.37f, 632.32f, 677.98f, 637.67f, 676.54f, 640.00f, 678.54f, 643.52f, 675.18f, 647.80f, 671.07f, 649.49f, 647.21f, 649.12f, 636.65f,
+		0
+	};
+
+
+	// 남성 실루엣 2 (사용자 제공 SVG, viewBox 850x1250)
+	// [점 수(시작점 + 베지어 3점씩), x, y, ...] 반복, -1 = 다음 <path>(따로 채움), 0 = 끝  (viewBox 850x1250)
+	const float kMale2[] = {
+		109, 443.49f, 177.41f, 417.52f, 179.45f, 391.54f, 181.48f, 365.57f, 183.52f, 362.51f, 188.61f, 359.46f, 193.71f, 356.40f, 198.80f, 353.34f, 201.86f, 350.29f, 204.91f, 347.23f, 207.97f, 338.06f, 213.57f, 328.90f, 219.18f, 319.73f, 224.78f, 313.62f, 228.85f, 307.51f, 232.93f, 301.40f, 237.00f, 295.29f, 238.02f, 289.18f, 239.04f, 283.07f, 240.06f, 275.43f, 247.19f, 267.79f, 254.32f, 260.15f, 261.45f, 244.36f, 280.29f, 228.58f, 299.14f, 212.79f, 317.98f, 202.60f, 330.71f, 192.42f, 343.45f, 182.23f, 356.18f, 168.48f, 373.50f, 154.73f, 390.81f, 140.98f, 408.13f, 140.47f, 413.22f, 139.96f, 418.32f, 139.45f, 423.41f, 142.00f, 435.12f, 144.54f, 446.84f, 147.09f, 458.55f, 151.67f, 462.62f, 156.26f, 466.70f, 160.84f, 470.77f, 174.59f, 482.48f, 188.34f, 494.20f, 202.09f, 505.91f, 216.86f, 520.17f, 231.63f, 534.43f, 246.40f, 548.69f, 254.55f, 555.31f, 262.69f, 561.93f, 270.84f, 568.55f, 272.37f, 566.00f, 273.89f, 563.46f, 275.42f, 560.91f, 275.42f, 560.91f, 284.44f, 570.47f, 289.17f, 572.37f, 294.92f, 574.67f, 302.92f, 570.08f, 302.92f, 570.08f, 307.50f, 569.06f, 312.09f, 568.04f, 316.67f, 567.02f, 395.10f, 573.13f, 473.53f, 579.24f, 551.96f, 585.35f, 556.03f, 579.75f, 560.11f, 574.14f, 564.18f, 568.54f, 570.80f, 567.01f, 577.42f, 565.49f, 584.04f, 563.96f, 588.11f, 556.83f, 592.19f, 549.70f, 596.26f, 542.57f, 597.28f, 543.59f, 598.30f, 544.60f, 599.32f, 545.62f, 602.89f, 533.91f, 606.45f, 522.19f, 610.02f, 510.48f, 619.19f, 491.13f, 628.35f, 471.77f, 637.52f, 452.42f, 640.07f, 442.23f, 642.61f, 432.05f, 645.16f, 421.86f, 643.63f, 409.13f, 642.11f, 396.39f, 640.58f, 383.66f, 638.54f, 381.62f, 636.50f, 379.59f, 634.46f, 377.55f, 612.05f, 342.92f, 589.64f, 308.28f, 567.23f, 273.65f, 558.57f, 262.45f, 549.91f, 251.24f, 541.25f, 240.04f, 534.12f, 233.42f, 526.99f, 226.80f, 519.86f, 220.18f, 508.15f, 216.11f, 496.43f, 212.03f, 484.72f, 207.96f, 478.10f, 206.94f, 471.48f, 205.92f, 464.86f, 204.90f, 457.73f, 195.73f, 450.60f, 186.57f, 443.47f, 177.40f,
+		61, 529.05f, 353.12f, 537.20f, 358.72f, 545.34f, 364.33f, 553.49f, 369.93f, 559.09f, 385.72f, 564.70f, 401.50f, 570.30f, 417.29f, 572.34f, 420.86f, 574.37f, 424.42f, 576.41f, 427.99f, 576.41f, 431.05f, 576.41f, 434.10f, 576.41f, 437.16f, 577.43f, 442.76f, 578.44f, 448.37f, 579.46f, 453.97f, 579.46f, 457.03f, 579.46f, 460.08f, 579.46f, 463.14f, 577.42f, 465.69f, 575.39f, 468.23f, 573.35f, 470.78f, 571.31f, 480.46f, 569.28f, 490.13f, 567.24f, 499.81f, 565.71f, 503.38f, 564.19f, 506.94f, 562.66f, 510.51f, 560.62f, 517.13f, 558.59f, 523.75f, 556.55f, 530.37f, 547.38f, 528.84f, 538.22f, 527.32f, 529.05f, 525.79f, 529.56f, 523.24f, 530.07f, 520.70f, 530.58f, 518.15f, 530.07f, 514.58f, 529.56f, 511.02f, 529.05f, 507.45f, 530.58f, 501.85f, 532.10f, 496.24f, 533.63f, 490.64f, 533.63f, 479.94f, 533.63f, 469.25f, 533.63f, 458.55f, 531.59f, 451.42f, 529.56f, 444.29f, 527.52f, 437.16f, 527.52f, 432.07f, 527.52f, 426.97f, 527.52f, 421.88f, 529.05f, 414.75f, 530.57f, 407.62f, 532.10f, 400.49f, 531.08f, 393.87f, 530.06f, 387.25f, 529.04f, 380.63f, 529.04f, 371.46f, 529.04f, 362.30f, 529.04f, 353.13f,
+		49, 281.53f, 391.32f, 285.61f, 408.64f, 289.68f, 425.95f, 293.76f, 443.27f, 295.29f, 447.34f, 296.81f, 451.42f, 298.34f, 455.49f, 303.94f, 471.28f, 309.55f, 487.07f, 315.15f, 502.86f, 319.73f, 506.43f, 324.32f, 509.99f, 328.90f, 513.56f, 320.75f, 520.18f, 312.61f, 526.80f, 304.46f, 533.42f, 294.78f, 523.23f, 285.11f, 513.05f, 275.43f, 502.86f, 269.32f, 498.28f, 263.21f, 493.69f, 257.10f, 489.11f, 256.08f, 486.56f, 255.06f, 484.02f, 254.04f, 481.47f, 249.46f, 478.42f, 244.87f, 475.36f, 240.29f, 472.31f, 240.29f, 468.74f, 240.29f, 465.18f, 240.29f, 461.61f, 236.21f, 457.53f, 232.14f, 453.46f, 228.06f, 449.38f, 225.01f, 445.31f, 221.95f, 441.23f, 218.90f, 437.16f, 221.95f, 435.12f, 225.01f, 433.09f, 228.06f, 431.05f, 231.12f, 427.99f, 234.17f, 424.94f, 237.23f, 421.88f, 246.40f, 416.79f, 255.56f, 411.69f, 264.73f, 406.60f, 270.33f, 401.51f, 275.94f, 396.41f, 281.54f, 391.32f,
+		-1,
+		73, 368.63f, 184.29f, 366.59f, 178.94f, 364.56f, 173.60f, 362.52f, 168.25f, 358.45f, 169.27f, 354.37f, 170.29f, 350.30f, 171.31f, 348.77f, 167.74f, 347.25f, 164.18f, 345.72f, 160.61f, 346.99f, 161.88f, 348.27f, 163.16f, 349.54f, 164.43f, 352.34f, 164.68f, 355.14f, 164.94f, 357.94f, 165.19f, 355.39f, 160.10f, 352.85f, 155.00f, 350.30f, 149.91f, 346.23f, 144.31f, 342.15f, 138.70f, 338.08f, 133.10f, 338.08f, 129.53f, 338.08f, 125.97f, 338.08f, 122.40f, 334.51f, 112.21f, 330.95f, 102.03f, 327.38f, 91.84f, 330.95f, 83.18f, 334.51f, 74.53f, 338.08f, 65.87f, 345.72f, 56.70f, 353.36f, 47.54f, 361.00f, 38.37f, 364.06f, 35.82f, 367.11f, 33.28f, 370.17f, 30.73f, 378.32f, 29.20f, 386.47f, 27.68f, 394.62f, 26.15f, 400.22f, 27.68f, 405.83f, 29.20f, 411.43f, 30.73f, 419.07f, 34.30f, 426.71f, 37.86f, 434.35f, 41.43f, 440.46f, 51.62f, 446.57f, 61.80f, 452.68f, 71.99f, 454.72f, 78.61f, 456.75f, 85.23f, 458.79f, 91.85f, 460.83f, 91.34f, 462.86f, 90.83f, 464.90f, 90.32f, 463.37f, 93.38f, 461.85f, 96.43f, 460.32f, 99.49f, 460.32f, 107.64f, 460.32f, 115.79f, 460.32f, 123.94f, 456.25f, 128.52f, 452.17f, 133.11f, 448.10f, 137.69f, 448.61f, 142.78f, 449.12f, 147.88f, 449.63f, 152.97f, 445.05f, 164.68f, 440.46f, 176.40f, 435.88f, 188.11f, 413.47f, 186.84f, 391.06f, 185.56f, 368.65f, 184.29f,
+		211, 322.79f, 563.97f, 319.73f, 570.59f, 316.68f, 577.21f, 313.62f, 583.83f, 312.09f, 591.47f, 310.57f, 599.11f, 309.04f, 606.75f, 309.04f, 616.43f, 309.04f, 626.10f, 309.04f, 635.78f, 310.06f, 642.40f, 311.08f, 649.02f, 312.10f, 655.64f, 314.65f, 676.01f, 317.19f, 696.39f, 319.74f, 716.76f, 321.27f, 732.55f, 322.79f, 748.33f, 324.32f, 764.12f, 325.85f, 777.36f, 327.37f, 790.61f, 328.90f, 803.85f, 331.45f, 818.62f, 333.99f, 833.39f, 336.54f, 848.16f, 336.03f, 855.29f, 335.52f, 862.42f, 335.01f, 869.55f, 333.99f, 878.72f, 332.97f, 887.88f, 331.95f, 897.05f, 336.02f, 938.30f, 340.10f, 979.56f, 344.17f, 1020.81f, 350.28f, 1055.95f, 356.39f, 1091.09f, 362.50f, 1126.23f, 363.52f, 1131.83f, 364.54f, 1137.44f, 365.56f, 1143.04f, 370.65f, 1144.57f, 375.75f, 1146.09f, 380.84f, 1147.62f, 381.35f, 1152.71f, 381.86f, 1157.81f, 382.37f, 1162.90f, 383.39f, 1163.92f, 384.41f, 1164.94f, 385.43f, 1165.96f, 385.43f, 1165.96f, 374.73f, 1162.90f, 385.43f, 1179.71f, 396.13f, 1196.52f, 409.88f, 1205.68f, 409.88f, 1205.68f, 419.05f, 1206.70f, 428.21f, 1207.72f, 437.38f, 1208.74f, 445.53f, 1208.74f, 453.68f, 1208.74f, 461.83f, 1208.74f, 463.87f, 1205.68f, 465.90f, 1202.63f, 467.94f, 1199.57f, 468.96f, 1193.97f, 469.98f, 1188.36f, 471.00f, 1182.76f, 462.85f, 1171.56f, 454.70f, 1160.35f, 446.55f, 1149.15f, 447.06f, 1145.08f, 447.57f, 1141.00f, 448.08f, 1136.93f, 446.04f, 1136.93f, 444.01f, 1136.93f, 441.97f, 1136.93f, 441.46f, 1121.14f, 440.95f, 1105.36f, 440.44f, 1089.57f, 434.33f, 1061.05f, 428.22f, 1032.53f, 422.11f, 1004.01f, 417.02f, 976.51f, 411.92f, 949.00f, 406.83f, 921.50f, 408.87f, 918.44f, 410.90f, 915.39f, 412.94f, 912.33f, 411.92f, 905.71f, 410.90f, 899.09f, 409.88f, 892.47f, 416.50f, 851.73f, 423.12f, 810.98f, 429.74f, 770.24f, 435.34f, 749.87f, 440.95f, 729.49f, 446.55f, 709.12f, 453.68f, 725.93f, 460.81f, 742.73f, 467.94f, 759.54f, 476.09f, 778.89f, 484.24f, 798.25f, 492.39f, 817.60f, 496.46f, 832.88f, 500.54f, 848.16f, 504.61f, 863.44f, 505.63f, 868.02f, 506.65f, 872.61f, 507.67f, 877.19f, 510.22f, 878.72f, 512.76f, 880.24f, 515.31f, 881.77f, 513.27f, 885.84f, 511.24f, 889.92f, 509.20f, 893.99f, 511.75f, 910.80f, 514.29f, 927.60f, 516.84f, 944.41f, 516.84f, 959.69f, 516.84f, 974.97f, 516.84f, 990.25f, 514.29f, 1012.15f, 511.75f, 1034.05f, 509.20f, 1055.95f, 511.75f, 1061.55f, 514.29f, 1067.16f, 516.84f, 1072.76f, 512.77f, 1091.09f, 508.69f, 1109.43f, 504.62f, 1127.76f, 502.58f, 1132.34f, 500.55f, 1136.93f, 498.51f, 1141.51f, 498.51f, 1149.66f, 498.51f, 1157.81f, 498.51f, 1165.96f, 499.02f, 1168.00f, 499.53f, 1170.03f, 500.04f, 1172.07f, 500.04f, 1176.65f, 500.04f, 1181.24f, 500.04f, 1185.82f, 513.79f, 1188.37f, 527.54f, 1190.91f, 541.29f, 1193.46f, 546.89f, 1192.44f, 552.50f, 1191.42f, 558.10f, 1190.40f, 578.98f, 1194.47f, 599.86f, 1198.55f, 620.74f, 1202.62f, 633.47f, 1200.07f, 646.21f, 1197.53f, 658.94f, 1194.98f, 663.52f, 1192.94f, 668.11f, 1190.91f, 672.69f, 1188.87f, 669.12f, 1184.80f, 665.56f, 1180.72f, 661.99f, 1176.65f, 646.20f, 1172.07f, 630.42f, 1167.48f, 614.63f, 1162.90f, 609.54f, 1155.26f, 604.44f, 1147.62f, 599.35f, 1139.98f, 600.88f, 1137.94f, 602.40f, 1135.91f, 603.93f, 1133.87f, 601.89f, 1111.46f, 599.86f, 1089.05f, 597.82f, 1066.64f, 597.31f, 1037.10f, 596.80f, 1007.56f, 596.29f, 978.02f, 595.78f, 961.21f, 595.27f, 944.41f, 594.76f, 927.60f, 596.29f, 923.02f, 597.81f, 918.43f, 599.34f, 913.85f, 597.81f, 906.21f, 596.29f, 898.57f, 594.76f, 890.93f, 596.80f, 873.61f, 598.83f, 856.30f, 600.87f, 838.98f, 600.87f, 832.87f, 600.87f, 826.76f, 600.87f, 820.65f, 598.83f, 816.07f, 596.80f, 811.48f, 594.76f, 806.90f, 589.16f, 781.44f, 583.55f, 755.97f, 577.95f, 730.51f, 570.82f, 701.48f, 563.69f, 672.45f, 556.56f, 643.42f, 556.56f, 640.36f, 556.56f, 637.31f, 556.56f, 634.25f, 554.01f, 632.21f, 551.47f, 630.18f, 548.92f, 628.14f, 551.98f, 611.84f, 555.03f, 595.55f, 558.09f, 579.25f, 479.66f, 574.16f, 401.22f, 569.06f, 322.79f, 563.97f,
+		0
+	};
+
+	// 남성 실루엣 3 (사용자 제공 SVG, viewBox 850x1250)
+	// [점 수(시작점 + 베지어 3점씩), x, y, ...] 반복, -1 = 다음 <path>(따로 채움), 0 = 끝  (viewBox 850x1250)
+	const float kMale3[] = {
+		259, 469.89f, 135.32f, 468.20f, 148.78f, 462.98f, 161.41f, 462.51f, 177.35f, 473.48f, 184.11f, 481.49f, 195.49f, 492.05f, 202.37f, 500.41f, 207.81f, 526.12f, 215.96f, 536.35f, 219.43f, 549.79f, 223.92f, 573.96f, 224.88f, 580.67f, 235.30f, 582.61f, 238.43f, 581.60f, 241.06f, 583.11f, 244.45f, 591.76f, 263.38f, 598.16f, 289.21f, 604.03f, 310.35f, 604.87f, 318.30f, 605.71f, 326.26f, 606.54f, 334.19f, 615.26f, 367.32f, 617.74f, 405.52f, 626.19f, 441.02f, 630.05f, 457.22f, 626.25f, 475.34f, 629.88f, 491.00f, 632.95f, 503.94f, 628.94f, 520.50f, 628.68f, 531.98f, 627.86f, 567.47f, 627.21f, 598.51f, 627.40f, 631.98f, 622.66f, 633.58f, 620.84f, 633.03f, 620.05f, 638.76f, 623.37f, 643.09f, 630.08f, 674.21f, 626.18f, 684.27f, 625.05f, 687.24f, 620.36f, 688.56f, 618.81f, 691.05f, 610.09f, 704.85f, 596.65f, 724.67f, 575.76f, 726.27f, 576.29f, 718.37f, 580.16f, 715.65f, 581.93f, 709.24f, 584.75f, 698.50f, 581.13f, 683.11f, 578.17f, 676.25f, 576.97f, 675.91f, 575.76f, 675.56f, 574.49f, 675.14f, 574.49f, 675.51f, 574.49f, 675.88f, 574.49f, 676.25f, 567.37f, 687.73f, 575.03f, 704.23f, 557.30f, 705.81f, 557.03f, 690.91f, 558.10f, 662.70f, 562.19f, 650.14f, 563.87f, 644.97f, 567.25f, 640.17f, 568.36f, 634.26f, 567.54f, 634.26f, 566.73f, 634.26f, 565.91f, 634.26f, 563.62f, 632.84f, 558.90f, 633.02f, 554.81f, 633.08f, 551.63f, 637.26f, 550.89f, 640.85f, 551.08f, 649.02f, 537.74f, 664.60f, 540.76f, 709.53f, 542.50f, 737.66f, 542.87f, 743.33f, 546.87f, 749.33f, 544.98f, 755.86f, 543.97f, 759.17f, 539.75f, 763.08f, 538.81f, 766.05f, 539.21f, 778.95f, 539.60f, 791.80f, 540.05f, 804.74f, 540.12f, 812.52f, 545.58f, 819.21f, 542.49f, 827.48f, 541.82f, 829.18f, 538.33f, 830.61f, 537.55f, 831.96f, 535.25f, 836.14f, 537.02f, 842.34f, 536.33f, 845.60f, 533.90f, 857.36f, 541.69f, 864.30f, 537.55f, 876.33f, 529.24f, 900.68f, 523.18f, 927.36f, 514.19f, 952.44f, 512.12f, 958.14f, 507.29f, 963.96f, 505.55f, 969.54f, 500.14f, 986.88f, 509.84f, 1005.08f, 504.34f, 1020.68f, 500.58f, 1031.38f, 491.06f, 1031.57f, 490.80f, 1046.80f, 507.49f, 1067.37f, 486.17f, 1107.54f, 478.53f, 1124.07f, 474.33f, 1132.92f, 474.77f, 1139.80f, 461.25f, 1139.99f, 457.87f, 1137.62f, 452.50f, 1137.62f, 446.47f, 1137.69f, 443.96f, 1142.28f, 441.63f, 1149.94f, 440.30f, 1152.43f, 439.09f, 1153.22f, 437.87f, 1154.03f, 436.64f, 1154.84f, 434.87f, 1159.48f, 440.63f, 1169.76f, 437.87f, 1176.33f, 437.30f, 1177.69f, 433.45f, 1180.35f, 432.95f, 1182.02f, 433.38f, 1183.93f, 433.72f, 1185.86f, 434.13f, 1187.71f, 433.92f, 1189.07f, 432.18f, 1192.48f, 431.75f, 1194.52f, 415.52f, 1203.81f, 358.29f, 1213.84f, 356.61f, 1186.61f, 360.87f, 1182.76f, 360.97f, 1178.18f, 364.03f, 1172.92f, 370.91f, 1161.04f, 376.87f, 1159.66f, 372.64f, 1142.28f, 373.06f, 1135.46f, 373.49f, 1128.64f, 373.85f, 1121.85f, 371.54f, 1115.10f, 364.39f, 1112.07f, 362.78f, 1103.63f, 364.75f, 1102.10f, 364.19f, 1102.89f, 365.27f, 1100.17f, 352.20f, 1091.74f, 357.05f, 1075.29f, 351.72f, 1059.31f, 346.63f, 1043.95f, 346.02f, 1023.09f, 341.86f, 1005.87f, 341.47f, 996.83f, 341.06f, 987.67f, 340.62f, 978.63f, 337.03f, 963.95f, 338.14f, 945.20f, 334.49f, 929.72f, 334.08f, 921.41f, 333.65f, 913.06f, 333.28f, 904.70f, 328.25f, 888.84f, 321.68f, 877.66f, 317.24f, 859.27f, 316.85f, 842.59f, 316.44f, 825.93f, 316.01f, 809.31f, 316.45f, 807.30f, 318.30f, 801.70f, 317.24f, 797.92f, 311.35f, 776.31f, 307.73f, 746.44f, 301.26f, 724.06f, 297.39f, 710.75f, 301.49f, 693.20f, 297.53f, 679.70f, 293.98f, 667.37f, 288.45f, 656.76f, 282.78f, 646.79f, 278.89f, 639.86f, 278.29f, 628.60f, 268.03f, 627.42f, 263.97f, 629.68f, 254.55f, 626.73f, 248.32f, 626.34f, 248.39f, 582.95f, 232.63f, 552.53f, 223.71f, 516.05f, 222.88f, 500.92f, 222.04f, 485.72f, 221.23f, 470.62f, 216.00f, 448.32f, 220.69f, 427.74f, 226.20f, 406.97f, 233.03f, 381.02f, 233.91f, 354.59f, 240.91f, 329.69f, 241.76f, 322.82f, 242.56f, 316.07f, 243.40f, 309.23f, 248.94f, 289.82f, 255.67f, 258.11f, 266.83f, 243.31f, 276.76f, 230.07f, 301.69f, 230.22f, 318.46f, 222.82f, 329.13f, 218.14f, 342.29f, 214.89f, 352.92f, 209.23f, 361.95f, 204.40f, 372.01f, 190.01f, 380.04f, 183.04f, 380.27f, 161.90f, 374.91f, 149.72f, 373.84f, 131.93f, 370.57f, 131.93f, 367.29f, 131.93f, 364.02f, 131.93f, 362.81f, 129.93f, 362.48f, 130.01f, 361.53f, 127.39f, 355.67f, 120.60f, 358.01f, 104.66f, 360.29f, 96.71f, 365.79f, 95.20f, 368.21f, 96.52f, 368.90f, 89.87f, 364.65f, 83.79f, 368.20f, 66.34f, 370.18f, 61.48f, 377.65f, 42.78f, 396.74f, 26.52f, 421.84f, 25.11f, 453.15f, 23.35f, 476.83f, 44.83f, 482.18f, 68.29f, 480.92f, 78.13f, 479.70f, 88.01f, 478.50f, 97.91f, 486.11f, 100.20f, 489.66f, 101.97f, 490.77f, 110.39f, 483.59f, 120.47f, 488.41f, 135.45f, 469.77f, 135.36f, 469.79f, 135.35f, 469.82f, 135.35f, 469.84f, 135.34f,
+		40, 538.81f, 388.75f, 522.73f, 422.09f, 535.95f, 492.09f, 543.71f, 524.03f, 543.71f, 528.95f, 543.71f, 533.88f, 543.71f, 538.80f, 547.17f, 553.07f, 548.27f, 568.06f, 553.56f, 579.71f, 554.80f, 580.13f, 556.04f, 580.48f, 557.29f, 580.84f, 557.29f, 580.46f, 557.29f, 580.09f, 557.29f, 579.71f, 558.27f, 578.37f, 558.19f, 577.78f, 558.49f, 575.21f, 553.26f, 567.01f, 559.80f, 550.32f, 557.29f, 539.92f, 556.15f, 535.37f, 554.77f, 526.77f, 553.56f, 521.71f, 553.56f, 510.75f, 553.56f, 499.79f, 553.56f, 488.83f, 548.93f, 469.08f, 549.53f, 446.73f, 544.98f, 427.44f, 542.16f, 415.64f, 547.99f, 398.06f, 541.29f, 389.89f, 540.00f, 388.98f, 540.90f, 389.43f, 538.79f, 388.75f, 538.80f, 388.75f, 538.80f, 388.75f, 538.81f, 388.75f,
+		31, 308.63f, 401.22f, 305.88f, 409.00f, 307.56f, 417.93f, 304.98f, 426.30f, 303.74f, 430.17f, 299.74f, 435.96f, 298.84f, 439.89f, 297.02f, 447.60f, 303.97f, 456.05f, 301.29f, 466.08f, 298.10f, 477.78f, 293.54f, 505.77f, 298.84f, 520.63f, 299.66f, 520.63f, 300.47f, 520.63f, 301.29f, 520.63f, 301.29f, 519.87f, 301.29f, 519.10f, 301.29f, 518.34f, 308.16f, 508.90f, 307.83f, 493.98f, 311.11f, 480.83f, 317.48f, 455.38f, 324.12f, 446.03f, 314.80f, 418.33f, 312.72f, 412.03f, 314.67f, 406.74f, 311.11f, 402.47f, 309.86f, 401.52f, 310.77f, 401.99f, 308.63f, 401.22f,
+		46, 421.88f, 750.21f, 420.27f, 752.35f, 420.27f, 751.13f, 419.44f, 754.73f, 408.47f, 769.77f, 423.56f, 792.93f, 419.44f, 809.30f, 413.69f, 831.96f, 420.10f, 852.31f, 425.57f, 874.07f, 425.17f, 883.11f, 424.76f, 892.26f, 424.35f, 901.35f, 428.94f, 922.16f, 425.35f, 952.57f, 430.53f, 976.34f, 431.74f, 976.34f, 432.94f, 976.34f, 434.15f, 976.34f, 445.88f, 957.46f, 439.78f, 915.72f, 446.49f, 892.26f, 447.28f, 889.48f, 450.37f, 864.26f, 450.20f, 863.80f, 449.71f, 862.66f, 445.82f, 862.31f, 445.28f, 861.60f, 443.33f, 858.64f, 445.85f, 853.80f, 444.04f, 851.30f, 442.30f, 848.87f, 437.50f, 848.90f, 435.42f, 846.80f, 431.94f, 843.24f, 428.04f, 830.82f, 426.83f, 826.28f, 423.21f, 813.24f, 435.56f, 804.45f, 437.89f, 796.75f, 439.38f, 791.90f, 427.24f, 758.17f, 425.57f, 751.33f, 424.35f, 750.93f, 423.10f, 750.59f, 421.87f, 750.22f,
+		0
+	};
+
+	// 남성 실루엣 4 (사용자 제공 SVG, viewBox 850x1250)
+	// [점 수(시작점 + 베지어 3점씩), x, y, ...] 반복, -1 = 다음 <path>(따로 채움), 0 = 끝  (viewBox 850x1250)
+	const float kMale4[] = {
+		37, 569.13f, 610.70f, 568.06f, 614.58f, 567.00f, 618.47f, 565.93f, 622.35f, 563.81f, 626.23f, 561.70f, 630.12f, 559.58f, 634.00f, 559.58f, 634.00f, 557.53f, 638.11f, 555.97f, 641.20f, 555.04f, 643.08f, 554.28f, 644.59f, 554.28f, 644.59f, 555.34f, 637.88f, 556.41f, 631.18f, 557.47f, 624.47f, 557.47f, 624.47f, 558.52f, 627.64f, 558.52f, 605.40f, 558.52f, 583.16f, 559.58f, 537.60f, 559.58f, 537.60f, 558.17f, 526.30f, 556.76f, 515.00f, 555.35f, 503.70f, 555.35f, 494.87f, 555.35f, 486.05f, 555.35f, 477.22f, 561.00f, 493.47f, 566.65f, 509.71f, 572.30f, 525.96f, 572.65f, 535.14f, 573.00f, 544.31f, 573.35f, 553.49f, 571.94f, 572.56f, 570.54f, 591.63f, 569.13f, 610.70f,
+		28, 303.71f, 561.53f, 302.07f, 569.41f, 302.57f, 570.63f, 303.22f, 574.30f, 306.41f, 592.30f, 299.94f, 608.60f, 299.94f, 608.60f, 299.94f, 614.25f, 299.94f, 619.89f, 299.94f, 625.54f, 297.82f, 623.42f, 295.69f, 621.31f, 293.57f, 619.19f, 292.87f, 614.95f, 292.17f, 610.71f, 291.47f, 606.47f, 291.82f, 595.88f, 292.16f, 585.28f, 292.51f, 574.69f, 293.46f, 559.34f, 294.41f, 544.00f, 295.36f, 528.65f, 297.81f, 537.32f, 300.27f, 545.99f, 302.72f, 554.66f, 302.72f, 554.66f, 305.34f, 553.70f, 303.71f, 561.53f,
+		328, 635.89f, 458.14f, 634.12f, 442.96f, 632.36f, 427.78f, 630.59f, 412.60f, 630.59f, 412.60f, 610.47f, 377.64f, 625.29f, 367.04f, 640.13f, 356.45f, 635.88f, 362.81f, 626.35f, 349.03f, 616.81f, 335.26f, 615.74f, 314.08f, 607.28f, 290.76f, 598.80f, 267.46f, 583.74f, 264.07f, 583.04f, 262.31f, 582.32f, 260.54f, 572.09f, 247.83f, 569.26f, 244.28f, 566.43f, 240.75f, 501.07f, 202.59f, 501.07f, 202.59f, 501.07f, 202.59f, 492.59f, 201.18f, 488.34f, 199.76f, 484.11f, 198.35f, 476.33f, 192.70f, 476.33f, 192.70f, 476.33f, 192.70f, 474.92f, 193.76f, 468.21f, 191.29f, 461.49f, 188.81f, 457.26f, 182.81f, 457.26f, 182.81f, 457.26f, 182.81f, 456.20f, 155.24f, 457.62f, 150.30f, 459.03f, 145.36f, 460.79f, 136.52f, 464.32f, 135.82f, 467.85f, 135.10f, 468.21f, 124.51f, 469.63f, 116.73f, 471.04f, 108.96f, 467.85f, 105.78f, 466.44f, 105.78f, 465.03f, 105.78f, 464.66f, 103.31f, 464.66f, 103.31f, 464.66f, 103.31f, 463.25f, 95.18f, 465.73f, 91.65f, 468.20f, 88.12f, 466.78f, 69.39f, 466.08f, 61.97f, 465.38f, 54.55f, 460.08f, 53.13f, 460.08f, 53.13f, 457.96f, 49.95f, 455.84f, 46.78f, 453.72f, 43.60f, 449.84f, 40.07f, 445.95f, 36.53f, 442.07f, 33.00f, 439.71f, 31.12f, 437.36f, 29.23f, 435.00f, 27.35f, 432.64f, 25.82f, 430.29f, 24.28f, 427.93f, 22.75f, 427.93f, 22.75f, 414.16f, 20.28f, 404.28f, 20.63f, 394.38f, 20.99f, 379.19f, 32.29f, 368.93f, 41.83f, 358.70f, 51.37f, 359.04f, 66.56f, 359.04f, 66.56f, 358.69f, 72.45f, 358.33f, 78.33f, 357.98f, 84.22f, 358.57f, 87.28f, 359.16f, 90.35f, 359.75f, 93.41f, 357.84f, 98.81f, 355.93f, 104.22f, 354.02f, 109.62f, 354.02f, 114.56f, 354.02f, 119.51f, 354.02f, 124.45f, 356.49f, 124.80f, 358.97f, 125.16f, 361.44f, 125.51f, 362.50f, 129.39f, 363.55f, 133.27f, 364.61f, 137.15f, 367.43f, 144.22f, 370.26f, 151.28f, 373.08f, 158.35f, 372.38f, 170.00f, 371.67f, 181.65f, 370.97f, 193.30f, 367.44f, 194.01f, 363.91f, 194.71f, 360.38f, 195.42f, 357.55f, 197.54f, 354.73f, 199.66f, 351.90f, 201.78f, 346.25f, 206.02f, 340.60f, 210.26f, 334.95f, 214.50f, 334.95f, 214.50f, 320.11f, 226.15f, 294.68f, 239.92f, 269.25f, 253.70f, 256.52f, 272.76f, 246.99f, 303.49f, 237.45f, 334.21f, 214.14f, 357.52f, 214.14f, 357.52f, 218.02f, 359.99f, 221.91f, 362.46f, 225.79f, 364.93f, 230.74f, 369.88f, 235.68f, 374.82f, 240.63f, 379.77f, 240.63f, 379.77f, 245.93f, 436.97f, 240.63f, 449.68f, 235.33f, 462.40f, 238.51f, 490.99f, 238.51f, 531.25f, 238.51f, 571.51f, 249.10f, 578.92f, 249.10f, 578.92f, 251.22f, 598.70f, 253.35f, 618.49f, 255.47f, 638.27f, 255.47f, 652.39f, 255.47f, 666.52f, 255.47f, 680.64f, 257.59f, 689.82f, 259.71f, 699.00f, 261.83f, 708.18f, 269.60f, 713.83f, 277.37f, 719.48f, 285.14f, 725.13f, 290.79f, 729.72f, 296.45f, 734.31f, 302.10f, 738.90f, 302.10f, 738.90f, 312.69f, 846.95f, 315.87f, 913.69f, 319.06f, 980.44f, 340.25f, 1071.55f, 340.25f, 1071.55f, 340.25f, 1071.55f, 339.19f, 1072.61f, 330.71f, 1076.85f, 322.23f, 1081.08f, 338.13f, 1091.69f, 338.13f, 1091.69f, 341.31f, 1095.92f, 344.48f, 1100.16f, 347.66f, 1104.39f, 347.66f, 1104.39f, 327.54f, 1118.17f, 321.18f, 1124.51f, 314.82f, 1130.87f, 315.87f, 1135.12f, 315.87f, 1135.12f, 317.99f, 1136.88f, 320.11f, 1138.64f, 322.23f, 1140.40f, 317.29f, 1146.05f, 312.34f, 1151.71f, 307.40f, 1157.36f, 307.40f, 1157.36f, 298.92f, 1177.48f, 296.79f, 1187.01f, 294.68f, 1196.54f, 311.63f, 1208.21f, 332.83f, 1209.27f, 354.03f, 1210.32f, 365.67f, 1200.79f, 376.28f, 1195.49f, 386.87f, 1190.19f, 387.93f, 1171.12f, 387.93f, 1171.12f, 388.99f, 1164.06f, 390.06f, 1156.99f, 391.12f, 1149.93f, 396.77f, 1147.46f, 402.42f, 1144.99f, 408.07f, 1142.52f, 412.31f, 1139.34f, 416.55f, 1136.16f, 420.79f, 1132.98f, 421.85f, 1127.33f, 422.92f, 1121.68f, 423.98f, 1116.03f, 423.98f, 1112.50f, 423.98f, 1108.97f, 423.98f, 1105.44f, 427.16f, 1103.32f, 430.33f, 1101.20f, 433.51f, 1099.08f, 434.92f, 1095.55f, 436.33f, 1092.02f, 437.74f, 1088.49f, 435.62f, 1082.84f, 433.51f, 1077.19f, 431.39f, 1071.54f, 429.62f, 1051.06f, 427.85f, 1030.57f, 426.08f, 1010.09f, 425.38f, 958.88f, 424.67f, 907.68f, 423.97f, 856.47f, 425.74f, 837.76f, 427.50f, 819.04f, 429.27f, 800.33f, 431.39f, 771.72f, 433.51f, 743.12f, 435.63f, 714.51f, 437.40f, 734.64f, 439.16f, 754.76f, 440.93f, 774.89f, 444.47f, 783.72f, 448.00f, 792.55f, 451.54f, 801.38f, 454.72f, 811.26f, 457.89f, 821.15f, 461.07f, 831.03f, 461.07f, 831.03f, 469.55f, 949.69f, 464.26f, 994.18f, 458.95f, 1038.67f, 471.68f, 1066.22f, 471.68f, 1066.22f, 472.74f, 1068.34f, 473.79f, 1070.46f, 474.85f, 1072.58f, 475.55f, 1076.81f, 476.26f, 1081.05f, 476.96f, 1085.28f, 478.73f, 1089.16f, 480.50f, 1093.05f, 482.27f, 1096.93f, 487.57f, 1101.52f, 492.86f, 1106.12f, 498.16f, 1110.71f, 496.40f, 1114.24f, 494.64f, 1117.77f, 492.88f, 1121.30f, 496.76f, 1125.89f, 500.65f, 1130.49f, 504.53f, 1135.08f, 507.00f, 1137.20f, 509.48f, 1139.32f, 511.95f, 1141.44f, 513.01f, 1148.50f, 514.06f, 1155.57f, 515.12f, 1162.63f, 520.42f, 1171.46f, 525.71f, 1180.28f, 531.01f, 1189.11f, 531.01f, 1189.11f, 541.62f, 1195.47f, 562.81f, 1196.52f, 584.00f, 1197.58f, 590.37f, 1188.05f, 590.37f, 1188.05f, 593.90f, 1180.99f, 597.43f, 1173.92f, 600.96f, 1166.86f, 597.43f, 1152.38f, 593.90f, 1137.91f, 590.37f, 1123.43f, 586.83f, 1118.13f, 583.30f, 1112.84f, 579.76f, 1107.54f, 574.11f, 1104.00f, 568.46f, 1100.47f, 562.81f, 1096.93f, 564.93f, 1093.05f, 567.05f, 1089.16f, 569.17f, 1085.28f, 569.17f, 1077.51f, 569.17f, 1069.75f, 569.17f, 1061.98f, 566.34f, 1061.27f, 563.52f, 1060.57f, 560.69f, 1059.86f, 562.45f, 1054.92f, 564.21f, 1049.97f, 565.97f, 1045.03f, 567.04f, 1029.14f, 568.10f, 1013.25f, 569.17f, 997.36f, 569.17f, 997.36f, 560.69f, 964.51f, 564.94f, 954.98f, 569.17f, 945.45f, 562.82f, 869.18f, 565.98f, 836.34f, 569.18f, 803.49f, 552.21f, 743.12f, 552.21f, 743.12f, 570.23f, 731.47f, 588.24f, 719.81f, 606.26f, 708.16f, 614.38f, 693.68f, 622.51f, 679.19f, 630.63f, 664.71f, 629.57f, 659.77f, 628.52f, 654.82f, 627.46f, 649.88f, 624.99f, 639.64f, 622.51f, 629.39f, 620.04f, 619.15f, 623.92f, 587.73f, 627.81f, 556.30f, 631.69f, 524.88f, 633.10f, 502.63f, 634.51f, 480.38f, 635.92f, 458.13f,
+		0
+	};
+
+	// 남성 실루엣 5 (사용자 제공 SVG, viewBox 850x1250)
+	// [점 수(시작점 + 베지어 3점씩), x, y, ...] 반복, -1 = 다음 <path>(따로 채움), 0 = 끝  (viewBox 850x1250)
+	const float kMale5[] = {
+		109, 514.66f, 410.35f, 514.85f, 410.35f, 515.13f, 410.64f, 515.58f, 411.25f, 518.23f, 414.81f, 522.56f, 419.10f, 528.09f, 423.73f, 531.75f, 426.74f, 531.97f, 427.01f, 531.99f, 428.69f, 531.99f, 429.66f, 532.33f, 431.52f, 532.74f, 432.84f, 533.79f, 436.41f, 532.48f, 438.11f, 528.20f, 438.68f, 525.15f, 439.06f, 523.88f, 440.23f, 522.64f, 443.87f, 521.35f, 447.51f, 521.31f, 448.39f, 522.46f, 452.36f, 523.51f, 455.93f, 524.50f, 456.98f, 527.96f, 458.05f, 532.84f, 459.59f, 532.89f, 460.03f, 529.10f, 470.42f, 528.54f, 471.89f, 527.99f, 474.68f, 527.84f, 476.62f, 527.49f, 481.36f, 526.58f, 487.20f, 525.76f, 489.91f, 525.03f, 492.31f, 525.18f, 493.63f, 526.58f, 496.76f, 528.39f, 500.72f, 528.72f, 503.15f, 528.45f, 510.76f, 528.37f, 513.15f, 528.29f, 515.54f, 528.21f, 517.93f, 527.38f, 519.19f, 526.56f, 520.45f, 525.73f, 521.71f, 521.29f, 528.48f, 520.73f, 530.65f, 522.59f, 534.61f, 524.76f, 539.28f, 524.95f, 540.25f, 523.91f, 542.43f, 522.96f, 544.47f, 520.34f, 547.68f, 519.63f, 547.69f, 519.36f, 547.69f, 518.91f, 546.85f, 518.64f, 545.80f, 518.09f, 544.08f, 513.93f, 534.44f, 513.25f, 533.34f, 513.07f, 533.08f, 512.58f, 532.37f, 512.17f, 531.76f, 511.72f, 531.19f, 511.27f, 529.87f, 511.12f, 528.81f, 510.98f, 527.75f, 510.57f, 526.47f, 510.21f, 525.99f, 509.13f, 524.50f, 509.37f, 521.66f, 510.76f, 518.78f, 512.75f, 514.78f, 514.48f, 510.30f, 515.55f, 506.61f, 516.06f, 504.79f, 517.27f, 501.37f, 518.22f, 499.06f, 521.11f, 492.09f, 521.97f, 489.03f, 522.49f, 483.89f, 522.93f, 479.60f, 522.88f, 478.71f, 522.19f, 476.11f, 521.73f, 474.48f, 520.82f, 471.97f, 520.10f, 470.51f, 518.20f, 466.73f, 517.48f, 464.92f, 515.66f, 459.94f, 514.25f, 456.02f, 514.02f, 454.78f, 513.65f, 448.90f, 513.39f, 445.23f, 512.96f, 441.57f, 512.68f, 440.73f, 512.13f, 439.01f, 511.92f, 430.83f, 512.44f, 430.03f, 512.61f, 429.72f, 512.76f, 426.89f, 512.73f, 423.70f, 512.73f, 418.61f, 513.42f, 413.39f, 514.41f, 410.64f, 514.49f, 410.44f, 514.58f, 410.34f, 514.69f, 410.34f,
+		163, 424.74f, 744.26f, 425.18f, 744.26f, 425.88f, 745.64f, 426.60f, 748.02f, 427.06f, 749.39f, 427.79f, 751.72f, 428.24f, 753.18f, 428.70f, 754.63f, 429.34f, 757.02f, 429.62f, 758.47f, 429.90f, 759.93f, 431.05f, 764.69f, 432.20f, 769.10f, 433.31f, 773.47f, 434.51f, 778.98f, 434.89f, 781.32f, 435.27f, 783.66f, 435.69f, 785.73f, 435.82f, 785.95f, 435.95f, 786.17f, 436.29f, 788.20f, 436.62f, 790.45f, 436.91f, 792.75f, 437.33f, 795.09f, 437.56f, 795.66f, 437.79f, 796.23f, 438.21f, 798.62f, 438.45f, 800.96f, 438.74f, 803.26f, 439.35f, 806.44f, 439.85f, 808.02f, 440.99f, 811.55f, 441.00f, 812.78f, 439.97f, 815.71f, 438.42f, 820.10f, 438.46f, 824.22f, 440.24f, 833.18f, 440.66f, 835.48f, 441.20f, 836.75f, 442.01f, 837.58f, 443.35f, 839.03f, 444.61f, 841.31f, 444.62f, 842.37f, 444.62f, 842.81f, 444.19f, 844.06f, 443.68f, 845.17f, 441.69f, 849.39f, 442.27f, 853.99f, 445.60f, 860.32f, 447.27f, 863.49f, 447.36f, 863.80f, 447.26f, 867.20f, 447.20f, 869.81f, 446.82f, 871.76f, 445.83f, 874.69f, 443.94f, 880.10f, 443.40f, 883.78f, 442.89f, 894.53f, 442.49f, 902.72f, 442.55f, 904.40f, 443.21f, 908.77f, 443.68f, 911.46f, 444.03f, 915.40f, 444.05f, 917.52f, 444.10f, 922.08f, 445.28f, 925.34f, 447.24f, 926.33f, 447.95f, 926.68f, 448.80f, 927.29f, 449.20f, 927.68f, 449.87f, 928.34f, 449.78f, 928.56f, 448.04f, 930.70f, 446.99f, 931.95f, 445.59f, 933.78f, 444.99f, 934.76f, 443.29f, 937.48f, 441.67f, 942.93f, 441.70f, 945.98f, 441.71f, 947.44f, 441.43f, 950.23f, 441.05f, 952.13f, 439.58f, 959.93f, 439.06f, 964.80f, 438.99f, 971.52f, 438.86f, 989.08f, 437.61f, 1001.34f, 435.86f, 1003.13f, 435.64f, 1003.35f, 435.45f, 1003.48f, 435.15f, 1003.48f, 434.68f, 1003.48f, 433.95f, 1003.16f, 432.45f, 1002.41f, 430.59f, 1001.50f, 429.35f, 1001.07f, 428.51f, 1001.07f, 428.03f, 1001.07f, 427.67f, 1001.21f, 427.40f, 1001.49f, 427.25f, 1001.64f, 427.11f, 1001.71f, 426.97f, 1001.71f, 426.78f, 1001.71f, 426.59f, 1001.57f, 426.38f, 1001.32f, 425.98f, 1000.84f, 426.01f, 999.69f, 426.46f, 996.14f, 426.83f, 993.62f, 427.27f, 988.92f, 427.51f, 985.78f, 427.74f, 982.59f, 428.22f, 977.28f, 428.58f, 973.92f, 429.27f, 967.37f, 428.99f, 953.13f, 427.92f, 939.78f, 427.62f, 936.11f, 427.20f, 929.61f, 426.98f, 925.33f, 426.65f, 919.10f, 426.41f, 917.37f, 425.83f, 916.72f, 425.11f, 915.93f, 424.15f, 912.89f, 422.91f, 907.51f, 422.59f, 906.01f, 422.33f, 902.65f, 422.30f, 900.00f, 422.34f, 894.96f, 421.46f, 890.94f, 419.33f, 886.28f, 418.20f, 883.77f, 418.08f, 880.81f, 419.03f, 878.19f, 419.42f, 877.08f, 419.93f, 874.91f, 420.17f, 873.31f, 420.42f, 871.72f, 421.01f, 868.88f, 421.48f, 866.97f, 423.01f, 860.59f, 422.89f, 849.40f, 420.84f, 812.27f, 419.48f, 787.34f, 419.13f, 778.90f, 419.12f, 769.16f, 419.10f, 765.62f, 419.08f, 762.09f, 419.06f, 758.55f, 419.54f, 757.51f, 420.01f, 756.48f, 420.49f, 755.44f, 421.31f, 753.71f, 422.48f, 750.73f, 423.08f, 748.78f, 423.72f, 746.83f, 424.32f, 744.92f, 424.45f, 744.56f, 424.52f, 744.34f, 424.63f, 744.23f, 424.75f, 744.23f,
+		985, 404.14f, 51.11f, 398.01f, 51.11f, 394.98f, 51.83f, 391.53f, 53.52f, 385.15f, 56.59f, 382.07f, 58.26f, 380.62f, 59.38f, 379.17f, 60.46f, 373.58f, 62.68f, 372.12f, 62.69f, 371.72f, 62.69f, 369.61f, 63.60f, 367.50f, 64.68f, 365.34f, 65.76f, 362.92f, 66.85f, 362.13f, 67.17f, 360.37f, 67.76f, 355.45f, 71.26f, 354.53f, 72.51f, 354.18f, 73.00f, 352.74f, 74.78f, 351.25f, 76.48f, 348.80f, 79.34f, 348.46f, 80.05f, 346.83f, 85.19f, 345.20f, 90.34f, 345.03f, 91.22f, 345.08f, 95.38f, 345.11f, 98.34f, 344.87f, 100.82f, 344.44f, 102.37f, 343.59f, 105.30f, 343.53f, 109.01f, 344.27f, 111.48f, 344.59f, 112.45f, 345.67f, 114.52f, 346.66f, 116.01f, 348.77f, 119.08f, 349.27f, 120.76f, 349.36f, 124.87f, 349.38f, 126.51f, 349.71f, 128.67f, 350.07f, 129.68f, 351.03f, 132.32f, 350.98f, 132.63f, 349.05f, 133.85f, 344.96f, 136.50f, 344.51f, 140.09f, 347.37f, 146.83f, 348.37f, 149.21f, 349.18f, 151.32f, 349.19f, 151.54f, 349.19f, 152.34f, 352.13f, 158.23f, 353.48f, 160.21f, 354.29f, 161.31f, 355.32f, 163.33f, 355.91f, 164.65f, 357.12f, 167.58f, 359.55f, 169.36f, 362.39f, 169.36f, 362.43f, 169.36f, 362.48f, 169.36f, 362.52f, 169.36f, 363.52f, 169.36f, 364.50f, 169.61f, 364.76f, 169.87f, 365.75f, 171.10f, 367.09f, 181.30f, 367.54f, 191.25f, 367.67f, 193.92f, 367.80f, 196.58f, 367.93f, 199.25f, 367.10f, 199.89f, 366.26f, 200.54f, 365.43f, 201.18f, 361.70f, 204.05f, 359.14f, 208.50f, 358.47f, 213.15f, 358.06f, 215.98f, 355.37f, 221.58f, 354.18f, 222.04f, 353.65f, 222.27f, 352.02f, 222.90f, 350.57f, 223.45f, 349.12f, 224.00f, 345.42f, 225.54f, 342.33f, 226.89f, 339.25f, 228.25f, 336.47f, 229.34f, 336.16f, 229.34f, 335.85f, 229.34f, 332.90f, 230.61f, 329.64f, 232.10f, 326.38f, 233.64f, 322.02f, 235.58f, 319.95f, 236.44f, 317.92f, 237.30f, 314.53f, 238.88f, 312.47f, 239.97f, 308.55f, 242.00f, 300.19f, 246.07f, 299.84f, 246.07f, 299.75f, 246.07f, 296.58f, 247.61f, 292.84f, 249.46f, 289.10f, 251.31f, 285.89f, 252.85f, 285.80f, 252.85f, 285.67f, 252.85f, 284.74f, 253.44f, 283.73f, 254.11f, 282.72f, 254.83f, 280.79f, 256.13f, 279.42f, 256.98f, 276.87f, 258.69f, 272.89f, 263.06f, 271.15f, 266.04f, 268.80f, 270.18f, 265.20f, 281.23f, 261.71f, 294.88f, 261.28f, 296.57f, 260.73f, 298.69f, 260.47f, 299.54f, 259.96f, 301.36f, 256.50f, 318.46f, 255.37f, 324.80f, 254.95f, 327.10f, 254.32f, 330.07f, 253.93f, 331.40f, 253.55f, 332.73f, 253.25f, 334.55f, 253.26f, 335.43f, 253.26f, 336.27f, 252.98f, 338.09f, 252.64f, 339.42f, 252.30f, 340.75f, 251.37f, 345.45f, 250.53f, 349.83f, 249.73f, 354.22f, 248.68f, 359.58f, 248.22f, 361.79f, 247.76f, 363.96f, 247.08f, 367.46f, 246.71f, 369.55f, 246.38f, 371.63f, 245.78f, 374.20f, 245.49f, 375.31f, 245.15f, 376.42f, 244.73f, 378.41f, 244.52f, 379.74f, 243.19f, 387.71f, 242.68f, 390.55f, 241.92f, 393.92f, 241.45f, 396.00f, 240.99f, 398.48f, 240.87f, 399.46f, 240.75f, 400.43f, 240.37f, 402.61f, 240.03f, 404.33f, 236.37f, 423.25f, 236.33f, 423.65f, 236.36f, 434.66f, 236.37f, 444.70f, 235.97f, 448.60f, 234.84f, 450.07f, 234.58f, 450.43f, 233.44f, 451.15f, 232.25f, 451.78f, 229.96f, 452.95f, 229.26f, 453.93f, 229.28f, 455.88f, 229.30f, 457.56f, 230.69f, 459.27f, 232.91f, 460.40f, 235.27f, 461.57f, 235.94f, 462.98f, 234.99f, 464.89f, 234.60f, 465.65f, 233.86f, 466.85f, 233.34f, 467.47f, 232.82f, 468.14f, 231.65f, 471.03f, 230.71f, 473.91f, 228.52f, 480.65f, 228.25f, 484.59f, 228.51f, 505.47f, 228.71f, 520.73f, 228.71f, 521.12f, 227.80f, 522.28f, 227.32f, 522.90f, 226.49f, 524.19f, 225.97f, 525.17f, 224.89f, 527.22f, 224.94f, 527.92f, 226.98f, 537.37f, 227.77f, 541.12f, 228.62f, 546.38f, 228.87f, 549.07f, 229.12f, 551.72f, 229.50f, 554.46f, 229.77f, 555.08f, 230.04f, 555.70f, 230.46f, 557.99f, 230.75f, 560.16f, 231.04f, 562.37f, 231.60f, 565.24f, 232.05f, 566.56f, 233.15f, 570.00f, 233.17f, 576.68f, 232.14f, 579.74f, 231.45f, 581.83f, 231.38f, 582.98f, 231.71f, 589.47f, 231.88f, 593.49f, 231.89f, 598.49f, 231.73f, 600.57f, 231.30f, 605.70f, 231.89f, 611.58f, 233.30f, 615.46f, 234.30f, 618.19f, 234.44f, 618.94f, 234.06f, 620.76f, 233.47f, 623.99f, 233.06f, 644.25f, 233.44f, 650.80f, 233.69f, 654.63f, 234.41f, 657.50f, 235.61f, 659.40f, 238.49f, 663.84f, 239.62f, 666.26f, 241.21f, 671.11f, 243.36f, 677.86f, 246.95f, 683.13f, 251.31f, 686.00f, 252.78f, 687.00f, 256.15f, 688.30f, 261.30f, 689.92f, 265.56f, 691.20f, 270.84f, 693.01f, 273.02f, 693.83f, 275.35f, 694.72f, 277.01f, 695.20f, 278.27f, 695.20f, 280.17f, 695.20f, 281.14f, 694.11f, 282.16f, 691.70f, 282.81f, 690.19f, 283.38f, 689.65f, 284.92f, 688.93f, 288.05f, 687.57f, 288.64f, 685.44f, 286.67f, 682.63f, 286.04f, 681.75f, 285.55f, 680.78f, 285.54f, 680.56f, 285.54f, 679.86f, 281.30f, 677.92f, 279.78f, 677.92f, 279.75f, 677.92f, 279.72f, 677.92f, 279.69f, 677.92f, 277.83f, 677.92f, 276.66f, 677.18f, 276.65f, 676.05f, 276.65f, 675.52f, 276.46f, 674.81f, 276.24f, 674.46f, 275.57f, 673.45f, 276.18f, 672.69f, 278.07f, 672.14f, 280.36f, 671.50f, 281.81f, 670.51f, 282.55f, 669.09f, 283.81f, 666.56f, 283.06f, 653.69f, 281.37f, 648.93f, 280.73f, 647.17f, 280.54f, 645.18f, 280.47f, 638.99f, 280.40f, 631.65f, 280.35f, 631.12f, 279.21f, 628.39f, 278.53f, 626.80f, 277.67f, 624.60f, 277.26f, 623.50f, 276.26f, 620.81f, 273.25f, 615.89f, 271.06f, 613.48f, 269.23f, 611.42f, 269.09f, 610.85f, 269.82f, 609.38f, 270.43f, 608.18f, 272.20f, 591.31f, 272.20f, 586.89f, 272.17f, 583.97f, 272.38f, 583.13f, 273.72f, 580.24f, 275.02f, 577.48f, 275.36f, 576.11f, 275.63f, 572.48f, 275.87f, 570.05f, 276.24f, 567.03f, 276.49f, 565.84f, 276.74f, 564.60f, 277.06f, 561.10f, 277.16f, 558.05f, 277.23f, 556.19f, 277.30f, 554.34f, 277.37f, 552.48f, 278.27f, 551.48f, 279.18f, 550.49f, 280.08f, 549.49f, 283.36f, 545.92f, 284.39f, 543.08f, 283.87f, 539.15f, 283.34f, 535.04f, 283.46f, 529.56f, 284.19f, 526.63f, 284.57f, 525.12f, 285.94f, 520.42f, 287.22f, 516.21f, 288.55f, 511.77f, 289.69f, 506.99f, 289.94f, 504.86f, 290.18f, 502.82f, 290.68f, 499.10f, 291.05f, 496.58f, 291.67f, 492.68f, 291.66f, 491.80f, 291.16f, 490.17f, 290.80f, 489.07f, 290.40f, 485.45f, 290.27f, 481.29f, 290.19f, 478.95f, 290.10f, 476.60f, 290.02f, 474.26f, 290.71f, 473.65f, 291.39f, 473.04f, 292.08f, 472.43f, 296.20f, 468.76f, 297.64f, 467.02f, 298.98f, 464.18f, 301.27f, 459.11f, 300.62f, 455.67f, 295.99f, 448.47f, 293.61f, 444.82f, 293.42f, 443.50f, 294.57f, 439.20f, 295.85f, 434.50f, 296.07f, 434.10f, 298.35f, 432.31f, 299.45f, 431.46f, 301.42f, 429.85f, 302.78f, 428.77f, 304.11f, 427.67f, 304.80f, 427.23f, 305.20f, 427.23f, 305.35f, 427.23f, 305.47f, 427.30f, 305.55f, 427.42f, 305.77f, 427.77f, 305.96f, 428.26f, 305.96f, 428.57f, 305.96f, 428.84f, 306.46f, 430.11f, 307.09f, 431.43f, 307.72f, 432.71f, 308.23f, 434.38f, 308.23f, 435.13f, 308.25f, 436.68f, 309.56f, 439.80f, 313.49f, 447.77f, 314.05f, 448.91f, 314.60f, 450.06f, 315.16f, 451.20f, 314.92f, 452.71f, 314.69f, 454.21f, 314.45f, 455.72f, 314.03f, 458.20f, 313.54f, 461.74f, 313.34f, 463.56f, 312.56f, 469.94f, 311.23f, 478.40f, 310.68f, 480.61f, 309.91f, 483.67f, 309.61f, 492.43f, 310.17f, 495.61f, 310.41f, 497.02f, 311.00f, 498.96f, 311.54f, 499.89f, 312.85f, 502.35f, 318.53f, 508.71f, 320.17f, 509.53f, 322.35f, 510.66f, 323.02f, 511.67f, 323.36f, 514.36f, 323.58f, 516.01f, 323.02f, 517.63f, 321.68f, 519.24f, 320.59f, 520.58f, 319.59f, 522.14f, 319.46f, 522.76f, 319.33f, 523.38f, 318.91f, 524.98f, 318.48f, 526.35f, 317.67f, 529.01f, 317.83f, 531.66f, 319.06f, 535.10f, 319.65f, 536.77f, 319.78f, 545.04f, 319.20f, 549.07f, 318.95f, 551.06f, 318.78f, 551.29f, 317.72f, 551.43f, 315.78f, 551.67f, 314.86f, 553.32f, 314.55f, 557.12f, 314.39f, 558.93f, 314.10f, 561.10f, 313.89f, 561.86f, 313.63f, 562.66f, 313.12f, 564.88f, 312.66f, 566.83f, 312.24f, 568.78f, 311.30f, 572.06f, 310.57f, 574.15f, 308.29f, 580.50f, 306.66f, 585.87f, 306.68f, 587.02f, 306.68f, 587.64f, 306.31f, 589.41f, 305.84f, 591.01f, 300.62f, 608.44f, 300.20f, 610.57f, 300.29f, 619.81f, 300.37f, 627.90f, 301.21f, 632.23f, 304.21f, 640.34f, 304.70f, 641.66f, 305.18f, 642.99f, 305.67f, 644.31f, 305.66f, 648.00f, 305.66f, 651.68f, 305.65f, 655.37f, 305.67f, 661.92f, 305.86f, 667.62f, 306.14f, 669.30f, 306.47f, 670.89f, 306.92f, 676.72f, 307.20f, 682.34f, 307.79f, 692.59f, 307.89f, 693.21f, 310.70f, 704.42f, 311.11f, 705.88f, 311.58f, 708.04f, 311.81f, 709.27f, 312.04f, 710.46f, 312.92f, 713.77f, 313.70f, 716.55f, 315.07f, 721.18f, 315.72f, 723.83f, 318.36f, 735.52f, 318.82f, 737.59f, 319.42f, 739.84f, 319.69f, 740.50f, 319.96f, 741.16f, 320.38f, 743.54f, 320.67f, 745.80f, 321.39f, 751.81f, 322.43f, 757.81f, 324.24f, 766.20f, 325.17f, 770.30f, 326.20f, 775.87f, 326.58f, 778.56f, 327.29f, 783.37f, 327.95f, 786.91f, 329.29f, 793.35f, 331.19f, 802.31f, 331.90f, 806.24f, 331.91f, 807.61f, 331.91f, 808.45f, 332.34f, 810.39f, 332.79f, 811.94f, 333.29f, 813.48f, 334.04f, 817.15f, 334.46f, 820.06f, 336.70f, 835.96f, 340.54f, 852.33f, 345.14f, 865.86f, 347.15f, 871.77f, 347.24f, 872.16f, 347.10f, 876.23f, 346.93f, 880.88f, 348.00f, 895.37f, 348.75f, 899.26f, 348.98f, 900.58f, 349.24f, 903.50f, 349.26f, 905.76f, 349.28f, 908.15f, 349.82f, 912.57f, 350.47f, 916.27f, 351.17f, 920.11f, 351.66f, 924.40f, 351.68f, 927.01f, 351.70f, 929.40f, 352.15f, 933.73f, 352.66f, 936.64f, 353.18f, 939.55f, 353.94f, 945.21f, 354.34f, 949.23f, 354.73f, 953.25f, 355.26f, 957.31f, 355.54f, 958.28f, 355.77f, 959.25f, 356.20f, 962.78f, 356.46f, 966.14f, 356.96f, 971.97f, 357.72f, 977.01f, 360.06f, 990.07f, 360.67f, 993.47f, 361.33f, 997.62f, 361.52f, 999.34f, 361.71f, 1001.02f, 362.13f, 1003.23f, 362.45f, 1004.15f, 362.81f, 1005.08f, 363.33f, 1007.68f, 363.57f, 1009.89f, 363.86f, 1012.10f, 364.37f, 1015.01f, 364.74f, 1016.38f, 365.11f, 1017.75f, 365.44f, 1019.65f, 365.45f, 1020.57f, 365.45f, 1021.54f, 365.88f, 1023.48f, 366.33f, 1024.94f, 366.79f, 1026.39f, 367.34f, 1028.95f, 367.54f, 1030.68f, 367.73f, 1032.36f, 368.38f, 1035.45f, 369.02f, 1037.52f, 370.12f, 1041.18f, 370.70f, 1045.95f, 372.06f, 1062.48f, 372.31f, 1065.62f, 372.84f, 1069.19f, 373.25f, 1070.43f, 373.62f, 1071.62f, 373.94f, 1073.03f, 373.94f, 1073.52f, 373.94f, 1074.01f, 375.08f, 1076.56f, 376.43f, 1079.11f, 377.92f, 1081.93f, 379.32f, 1085.27f, 379.88f, 1087.48f, 380.39f, 1089.51f, 381.39f, 1092.42f, 382.11f, 1094.00f, 382.79f, 1095.59f, 383.65f, 1097.57f, 383.97f, 1098.40f, 384.29f, 1099.24f, 385.41f, 1100.73f, 386.48f, 1101.69f, 388.31f, 1103.40f, 388.36f, 1103.57f, 387.97f, 1105.04f, 387.71f, 1105.88f, 387.08f, 1108.76f, 386.53f, 1111.47f, 385.94f, 1114.22f, 384.83f, 1117.94f, 383.96f, 1119.85f, 383.09f, 1121.76f, 382.19f, 1124.51f, 381.99f, 1126.02f, 381.16f, 1131.11f, 380.86f, 1132.27f, 379.78f, 1134.49f, 379.17f, 1135.69f, 378.14f, 1138.22f, 377.49f, 1140.04f, 376.80f, 1141.86f, 376.02f, 1143.86f, 375.68f, 1144.48f, 375.38f, 1145.10f, 375.12f, 1145.86f, 375.12f, 1146.17f, 375.12f, 1146.48f, 374.82f, 1146.84f, 374.46f, 1146.97f, 373.31f, 1147.42f, 372.55f, 1150.84f, 372.35f, 1156.81f, 372.25f, 1160.04f, 371.93f, 1163.18f, 371.67f, 1163.76f, 371.41f, 1164.34f, 371.33f, 1165.27f, 371.47f, 1165.84f, 372.62f, 1170.21f, 381.48f, 1176.44f, 390.49f, 1179.23f, 393.97f, 1180.30f, 398.81f, 1180.82f, 403.95f, 1180.82f, 409.55f, 1180.82f, 415.53f, 1180.20f, 420.52f, 1178.97f, 426.21f, 1177.54f, 428.72f, 1176.37f, 429.15f, 1174.90f, 429.32f, 1174.41f, 429.58f, 1174.01f, 429.80f, 1174.01f, 430.02f, 1174.01f, 430.81f, 1173.07f, 431.59f, 1171.91f, 432.85f, 1170.04f, 432.90f, 1169.82f, 432.27f, 1169.34f, 431.20f, 1168.60f, 431.32f, 1167.67f, 432.59f, 1166.46f, 433.16f, 1165.88f, 433.99f, 1164.59f, 434.37f, 1163.52f, 435.02f, 1161.74f, 435.01f, 1161.57f, 434.25f, 1160.29f, 433.48f, 1158.97f, 433.48f, 1158.84f, 434.67f, 1153.83f, 435.86f, 1148.78f, 435.86f, 1148.64f, 435.13f, 1146.35f, 433.99f, 1142.87f, 434.07f, 1142.25f, 435.88f, 1141.65f, 438.30f, 1140.83f, 438.91f, 1139.50f, 438.52f, 1135.96f, 437.83f, 1129.24f, 437.36f, 1125.84f, 436.86f, 1124.70f, 436.32f, 1123.33f, 436.15f, 1119.97f, 436.57f, 1117.80f, 436.74f, 1116.92f, 437.01f, 1116.48f, 437.58f, 1116.48f, 438.15f, 1116.48f, 438.95f, 1116.88f, 440.24f, 1117.67f, 441.35f, 1118.41f, 443.44f, 1119.50f, 444.91f, 1120.14f, 446.60f, 1120.88f, 447.42f, 1121.14f, 448.84f, 1121.14f, 449.33f, 1121.14f, 449.89f, 1121.11f, 450.58f, 1121.06f, 453.10f, 1120.81f, 453.98f, 1120.54f, 455.56f, 1119.37f, 456.61f, 1118.61f, 457.80f, 1117.98f, 458.20f, 1117.97f, 458.60f, 1117.97f, 459.87f, 1117.16f, 461.06f, 1116.13f, 466.15f, 1111.79f, 474.92f, 1096.13f, 479.18f, 1083.97f, 480.43f, 1080.33f, 481.45f, 1077.05f, 481.45f, 1076.65f, 481.45f, 1076.25f, 481.70f, 1075.45f, 482.01f, 1074.83f, 483.96f, 1071.01f, 486.26f, 1061.87f, 487.20f, 1054.21f, 487.53f, 1051.51f, 488.07f, 1047.92f, 488.45f, 1046.24f, 489.38f, 1041.68f, 489.21f, 1034.34f, 488.08f, 1031.96f, 486.90f, 1029.45f, 486.81f, 1028.74f, 486.13f, 1017.96f, 485.71f, 1011.33f, 485.32f, 1008.33f, 484.83f, 1007.36f, 483.88f, 1005.51f, 484.23f, 995.87f, 485.35f, 993.51f, 486.09f, 992.04f, 489.55f, 989.09f, 495.35f, 985.05f, 500.53f, 981.46f, 503.02f, 978.56f, 503.00f, 976.22f, 503.00f, 975.56f, 502.71f, 974.01f, 502.35f, 972.78f, 501.39f, 969.38f, 500.39f, 958.69f, 500.96f, 957.62f, 501.65f, 956.29f, 503.52f, 948.62f, 503.80f, 945.92f, 504.04f, 943.53f, 506.18f, 935.99f, 507.04f, 934.34f, 507.60f, 933.23f, 512.57f, 916.77f, 512.56f, 916.02f, 512.56f, 915.44f, 513.79f, 911.05f, 514.95f, 907.33f, 518.59f, 896.01f, 520.73f, 884.19f, 521.48f, 871.18f, 521.89f, 863.83f, 521.89f, 863.48f, 520.93f, 860.66f, 519.70f, 857.05f, 519.70f, 856.82f, 520.86f, 853.41f, 521.18f, 852.49f, 521.49f, 851.58f, 521.81f, 850.66f, 521.48f, 849.66f, 521.14f, 848.66f, 520.81f, 847.66f, 520.26f, 845.98f, 519.80f, 844.31f, 519.80f, 843.87f, 519.80f, 843.43f, 521.11f, 841.78f, 522.73f, 840.21f, 523.69f, 839.26f, 524.66f, 838.30f, 525.62f, 837.35f, 525.52f, 835.74f, 525.41f, 834.14f, 525.31f, 832.53f, 524.94f, 827.01f, 523.19f, 819.42f, 521.38f, 815.54f, 520.97f, 814.64f, 520.57f, 813.75f, 520.16f, 812.85f, 520.13f, 808.50f, 520.10f, 804.15f, 520.07f, 799.80f, 519.99f, 787.95f, 520.07f, 786.40f, 520.92f, 782.76f, 523.12f, 773.27f, 523.22f, 770.00f, 522.66f, 727.90f, 522.30f, 700.66f, 522.29f, 686.99f, 522.64f, 682.35f, 523.10f, 675.71f, 523.06f, 658.15f, 522.61f, 657.41f, 522.12f, 656.71f, 522.15f, 646.53f, 522.62f, 645.42f, 523.31f, 643.82f, 524.30f, 636.38f, 524.76f, 629.70f, 525.01f, 625.87f, 525.85f, 622.69f, 527.27f, 620.17f, 528.40f, 618.08f, 530.35f, 614.48f, 531.52f, 612.17f, 532.69f, 609.86f, 534.47f, 606.52f, 535.47f, 604.83f, 536.43f, 603.10f, 538.12f, 599.98f, 539.20f, 597.85f, 542.49f, 591.27f, 545.16f, 587.57f, 547.27f, 586.62f, 548.28f, 586.17f, 549.73f, 585.18f, 550.48f, 584.38f, 552.10f, 582.73f, 555.18f, 576.50f, 558.37f, 568.33f, 559.62f, 565.13f, 561.52f, 560.56f, 562.56f, 558.12f, 563.64f, 555.68f, 564.85f, 552.48f, 565.23f, 551.02f, 565.66f, 549.56f, 566.43f, 547.56f, 566.95f, 546.58f, 567.52f, 545.60f, 569.12f, 542.18f, 570.50f, 539.03f, 571.88f, 535.83f, 574.57f, 530.76f, 576.49f, 527.69f, 580.97f, 520.48f, 582.66f, 517.19f, 584.17f, 512.58f, 585.93f, 507.30f, 585.82f, 504.87f, 583.74f, 501.13f, 583.20f, 500.15f, 582.66f, 499.16f, 582.12f, 498.18f, 582.56f, 496.32f, 582.99f, 494.45f, 583.43f, 492.59f, 585.17f, 485.10f, 586.12f, 478.37f, 586.15f, 472.75f, 586.15f, 468.64f, 586.32f, 467.71f, 587.57f, 464.55f, 588.04f, 463.37f, 588.52f, 462.18f, 588.99f, 461.00f, 588.96f, 458.20f, 588.93f, 455.40f, 588.90f, 452.60f, 588.87f, 444.77f, 588.90f, 444.06f, 589.81f, 442.20f, 591.63f, 438.51f, 591.75f, 437.14f, 591.23f, 429.09f, 590.71f, 421.44f, 590.10f, 418.35f, 588.20f, 413.69f, 586.48f, 409.42f, 585.38f, 405.71f, 583.85f, 399.36f, 583.11f, 396.09f, 582.05f, 392.30f, 581.55f, 390.89f, 581.05f, 389.48f, 580.64f, 388.02f, 580.63f, 387.67f, 580.62f, 387.32f, 580.12f, 385.60f, 579.53f, 383.83f, 578.94f, 382.07f, 577.89f, 378.80f, 577.20f, 376.64f, 576.51f, 374.44f, 575.51f, 371.39f, 574.92f, 369.81f, 573.56f, 366.15f, 571.81f, 359.80f, 570.51f, 353.93f, 570.00f, 351.37f, 569.12f, 347.71f, 568.61f, 345.77f, 568.10f, 343.83f, 567.46f, 341.05f, 567.22f, 339.59f, 566.98f, 338.13f, 566.38f, 335.13f, 565.91f, 332.97f, 565.45f, 330.76f, 564.60f, 326.13f, 564.04f, 322.60f, 562.62f, 313.46f, 562.34f, 312.27f, 560.52f, 307.38f, 559.02f, 303.19f, 555.23f, 291.69f, 554.45f, 288.87f, 553.90f, 286.89f, 549.46f, 276.32f, 548.47f, 274.60f, 547.98f, 273.81f, 547.07f, 271.47f, 546.47f, 269.45f, 545.01f, 264.60f, 544.38f, 263.50f, 541.92f, 261.49f, 540.81f, 260.57f, 538.84f, 258.91f, 537.55f, 257.82f, 532.73f, 253.62f, 529.66f, 251.71f, 521.93f, 248.16f, 517.53f, 246.13f, 513.35f, 244.18f, 512.60f, 243.79f, 511.89f, 243.40f, 511.05f, 243.10f, 510.78f, 243.10f, 510.19f, 243.10f, 505.98f, 241.33f, 503.05f, 239.86f, 501.94f, 239.30f, 497.81f, 237.79f, 493.86f, 236.46f, 489.91f, 235.17f, 486.18f, 233.80f, 485.65f, 233.49f, 485.07f, 233.14f, 483.83f, 232.62f, 482.85f, 232.32f, 480.54f, 231.59f, 460.74f, 223.88f, 459.05f, 223.05f, 457.41f, 222.23f, 454.43f, 216.55f, 452.96f, 211.48f, 451.31f, 205.70f, 448.71f, 202.19f, 443.95f, 199.19f, 441.95f, 197.93f, 441.86f, 197.71f, 441.28f, 192.98f, 441.09f, 191.07f, 441.87f, 188.33f, 443.63f, 184.77f, 446.32f, 179.26f, 448.03f, 173.89f, 448.86f, 168.13f, 449.27f, 165.30f, 449.53f, 164.63f, 451.02f, 162.98f, 452.55f, 161.33f, 452.77f, 160.71f, 453.09f, 158.01f, 453.29f, 156.28f, 453.67f, 154.51f, 453.93f, 153.98f, 454.19f, 153.49f, 454.40f, 151.90f, 454.38f, 150.48f, 454.36f, 148.67f, 454.70f, 147.20f, 455.48f, 145.47f, 456.30f, 143.60f, 456.68f, 141.83f, 456.95f, 137.94f, 457.14f, 135.15f, 457.43f, 132.58f, 457.51f, 132.23f, 457.64f, 131.92f, 457.31f, 130.37f, 456.81f, 128.79f, 455.71f, 125.31f, 456.00f, 123.49f, 458.06f, 121.35f, 461.52f, 117.73f, 460.74f, 111.06f, 454.76f, 92.86f, 454.30f, 91.40f, 454.02f, 89.37f, 454.05f, 87.78f, 454.25f, 81.41f, 450.36f, 73.22f, 444.47f, 67.53f, 433.26f, 56.76f, 431.92f, 55.80f, 424.87f, 53.27f, 422.07f, 52.24f, 420.17f, 51.90f, 415.79f, 51.64f, 410.87f, 51.33f, 407.11f, 51.15f, 404.10f, 51.15f,
+		0
+	};
+
+	// 남성 실루엣 6 (사용자 제공 SVG, viewBox 850x1250)
+	// [점 수(시작점 + 베지어 3점씩), x, y, ...] 반복, -1 = 다음 <path>(따로 채움), 0 = 끝  (viewBox 850x1250)
+	const float kMale6[] = {
+		274, 388.80f, 30.68f, 417.56f, 16.19f, 457.80f, 40.47f, 462.07f, 75.57f, 462.84f, 84.78f, 461.77f, 94.02f, 460.80f, 103.17f, 462.00f, 101.54f, 463.06f, 99.22f, 465.44f, 99.33f, 468.72f, 99.54f, 470.72f, 102.94f, 471.11f, 105.92f, 472.85f, 119.67f, 464.19f, 132.60f, 463.39f, 134.12f, 460.89f, 138.68f, 459.01f, 137.39f, 456.09f, 136.30f, 453.33f, 195.71f, 444.89f, 175.40f, 484.07f, 206.33f, 490.67f, 211.37f, 496.54f, 217.26f, 503.02f, 222.44f, 516.40f, 231.43f, 547.59f, 221.56f, 576.86f, 258.05f, 584.54f, 271.07f, 593.26f, 289.87f, 591.58f, 304.83f, 590.88f, 315.58f, 587.46f, 313.20f, 598.07f, 322.95f, 615.72f, 338.70f, 613.35f, 343.70f, 614.29f, 355.85f, 614.19f, 361.20f, 612.64f, 366.86f, 615.19f, 371.91f, 619.56f, 381.60f, 620.96f, 392.22f, 622.17f, 402.67f, 622.82f, 424.00f, 626.31f, 415.74f, 623.36f, 433.38f, 616.93f, 450.57f, 589.49f, 455.09f, 577.00f, 461.95f, 557.66f, 472.40f, 532.04f, 478.69f, 510.94f, 484.22f, 507.24f, 501.96f, 502.94f, 499.05f, 510.37f, 514.50f, 515.31f, 525.83f, 514.94f, 538.52f, 514.46f, 550.63f, 513.70f, 560.98f, 583.32f, 749.17f, 525.75f, 808.56f, 521.58f, 819.05f, 522.57f, 833.17f, 523.08f, 855.06f, 522.66f, 901.26f, 544.56f, 899.11f, 530.89f, 994.84f, 514.73f, 1110.78f, 523.17f, 1106.78f, 530.37f, 1125.47f, 534.25f, 1134.25f, 535.57f, 1141.71f, 549.26f, 1156.16f, 553.86f, 1161.21f, 559.16f, 1165.83f, 562.36f, 1171.98f, 563.89f, 1175.67f, 576.70f, 1194.44f, 568.50f, 1200.51f, 567.95f, 1202.03f, 567.32f, 1203.53f, 566.43f, 1204.90f, 566.30f, 1210.04f, 567.17f, 1210.25f, 561.62f, 1212.54f, 561.54f, 1216.78f, 557.14f, 1218.67f, 553.46f, 1218.55f, 546.54f, 1230.53f, 528.78f, 1222.86f, 523.55f, 1207.29f, 511.55f, 1202.82f, 510.42f, 1191.18f, 507.02f, 1180.00f, 505.74f, 1174.98f, 500.01f, 1156.72f, 496.94f, 1154.76f, 490.25f, 1149.93f, 474.06f, 1146.53f, 472.19f, 1125.63f, 469.70f, 1113.55f, 480.48f, 1105.44f, 480.43f, 1098.82f, 481.58f, 1078.72f, 488.76f, 1094.02f, 469.51f, 1017.67f, 461.48f, 981.80f, 464.43f, 991.88f, 454.53f, 974.13f, 444.43f, 955.60f, 437.97f, 951.32f, 455.03f, 884.70f, 442.23f, 869.02f, 441.01f, 835.13f, 438.92f, 819.97f, 430.25f, 756.69f, 425.80f, 779.49f, 418.32f, 667.08f, 418.22f, 660.86f, 417.70f, 654.66f, 417.12f, 648.47f, 416.72f, 644.40f, 418.96f, 634.94f, 404.55f, 635.93f, 403.44f, 642.06f, 405.71f, 647.93f, 407.83f, 653.55f, 412.32f, 667.22f, 418.73f, 706.49f, 416.10f, 753.83f, 412.60f, 837.54f, 419.73f, 854.87f, 408.01f, 875.69f, 446.18f, 969.97f, 416.51f, 942.74f, 413.39f, 999.64f, 412.65f, 1021.91f, 404.61f, 1063.65f, 409.66f, 1079.50f, 411.33f, 1085.22f, 413.79f, 1090.77f, 414.31f, 1096.78f, 414.34f, 1099.18f, 416.34f, 1100.75f, 417.79f, 1102.41f, 419.93f, 1104.56f, 424.57f, 1112.09f, 424.65f, 1117.43f, 425.50f, 1146.77f, 407.57f, 1144.79f, 405.50f, 1153.23f, 398.43f, 1180.18f, 405.27f, 1195.36f, 391.78f, 1205.00f, 390.64f, 1205.70f, 390.63f, 1207.11f, 390.29f, 1208.27f, 387.64f, 1220.73f, 372.83f, 1231.92f, 363.98f, 1222.16f, 360.49f, 1223.66f, 355.62f, 1222.88f, 354.23f, 1218.92f, 348.89f, 1217.79f, 349.13f, 1218.59f, 347.74f, 1213.13f, 346.72f, 1212.10f, 345.76f, 1211.02f, 344.84f, 1209.92f, 343.31f, 1208.99f, 341.45f, 1208.08f, 341.02f, 1206.18f, 339.44f, 1200.02f, 340.81f, 1193.52f, 343.09f, 1187.72f, 344.24f, 1185.01f, 344.52f, 1182.03f, 345.62f, 1179.31f, 349.42f, 1169.47f, 357.80f, 1162.19f, 364.80f, 1144.11f, 366.93f, 1137.38f, 368.05f, 1130.39f, 369.81f, 1123.56f, 371.05f, 1118.36f, 373.01f, 1113.09f, 372.08f, 1107.67f, 370.77f, 1100.41f, 371.43f, 1092.99f, 370.51f, 1085.69f, 367.27f, 1058.63f, 347.53f, 996.79f, 341.17f, 968.77f, 332.92f, 932.78f, 333.47f, 940.89f, 336.23f, 899.11f, 338.33f, 867.64f, 338.21f, 869.70f, 333.88f, 838.49f, 330.75f, 811.81f, 325.49f, 811.70f, 323.67f, 810.16f, 307.21f, 796.69f, 297.02f, 765.74f, 291.89f, 744.86f, 280.28f, 693.08f, 286.78f, 657.27f, 288.68f, 632.02f, 289.37f, 617.58f, 287.47f, 591.05f, 298.94f, 561.81f, 305.09f, 545.11f, 300.54f, 533.26f, 306.69f, 517.24f, 308.79f, 511.72f, 313.07f, 506.90f, 313.15f, 500.73f, 308.11f, 498.85f, 303.94f, 495.35f, 299.05f, 493.17f, 288.39f, 487.62f, 247.83f, 480.58f, 227.75f, 467.46f, 224.20f, 465.22f, 220.28f, 463.67f, 216.28f, 462.47f, 211.66f, 461.13f, 200.03f, 455.30f, 192.19f, 447.27f, 189.96f, 445.14f, 189.38f, 442.01f, 188.36f, 439.24f, 186.38f, 433.36f, 188.64f, 427.08f, 187.11f, 421.14f, 186.08f, 413.93f, 187.76f, 406.57f, 190.76f, 400.01f, 200.07f, 379.64f, 201.44f, 357.59f, 205.37f, 347.08f, 210.57f, 337.42f, 220.41f, 331.83f, 228.01f, 324.32f, 232.32f, 320.20f, 228.32f, 312.14f, 231.06f, 301.49f, 240.55f, 265.39f, 262.89f, 244.19f, 289.99f, 237.49f, 304.19f, 232.80f, 314.46f, 235.94f, 324.84f, 224.92f, 353.27f, 195.48f, 357.23f, 197.22f, 369.11f, 186.52f, 370.37f, 136.81f, 366.59f, 162.72f, 364.72f, 136.19f, 358.74f, 139.77f, 358.93f, 133.93f, 356.30f, 129.02f, 352.37f, 121.38f, 347.65f, 97.44f, 356.34f, 99.30f, 358.39f, 99.78f, 358.76f, 102.21f, 359.82f, 103.71f, 360.12f, 88.65f, 356.77f, 73.03f, 362.04f, 58.45f, 367.18f, 46.37f, 376.85f, 36.19f, 388.80f, 30.68f,
+		13, 280.75f, 379.11f, 273.16f, 391.58f, 264.26f, 403.23f, 254.71f, 414.26f, 279.25f, 427.92f, 283.86f, 437.99f, 309.19f, 452.16f, 315.91f, 408.97f, 300.46f, 404.57f, 287.20f, 373.48f, 285.09f, 375.39f, 282.46f, 376.77f, 280.75f, 379.11f,
+		13, 537.60f, 372.98f, 528.26f, 395.70f, 510.65f, 419.60f, 509.81f, 421.34f, 508.38f, 426.17f, 508.25f, 431.27f, 507.95f, 436.26f, 524.23f, 425.33f, 539.10f, 411.86f, 557.39f, 404.25f, 549.83f, 394.48f, 543.55f, 383.79f, 537.60f, 372.97f,
+		0
+	};
+
+
+	struct SilhouetteDef { const float* data; float vbW; float vbH; };
+	const SilhouetteDef kFemaleSet[] = {
+		{ kFemale1, 472.0f, 1284.0f },
+		{ kFemale2, 516.0f, 1284.0f },
+		{ kFemale3, 602.0f, 1294.0f },
+		// 새 이미지는 여기 추가 (배열 데이터 + viewBox 크기)
+	};
+	const SilhouetteDef kMaleSet[] = {
+		{ kMale1, 850.0f, 1250.0f },
+		{ kMale2, 850.0f, 1250.0f },
+		{ kMale3, 850.0f, 1250.0f },
+		{ kMale4, 850.0f, 1250.0f },
+		{ kMale5, 850.0f, 1250.0f },
+		{ kMale6, 850.0f, 1250.0f },
+		// 새 이미지는 여기 추가
+	};
+}
+
+namespace VectorIcon
+{
+	void Silhouette(CDC* dc, const CRect& area, COLORREF col, const float* data, float vbW, float vbH, double fill)
+	{
+		if (area.IsRectEmpty() || !data || vbW <= 0 || vbH <= 0)
+			return;
+		EnsureGdiPlus();
+		// viewBox 를 area 안에 비율 유지해서 가운데 (fill = 차지 비율)
+		const double scale = (std::min)(area.Width() / vbW, area.Height() / vbH) * fill;
+		const double x = area.left + (area.Width() - vbW * scale) / 2.0;
+		const double y = area.top + (area.Height() - vbH * scale) / 2.0;
+
+		Gdiplus::Graphics g(dc->GetSafeHdc());
+		g.SetSmoothingMode(Gdiplus::SmoothingModeAntiAlias);
+		g.SetPixelOffsetMode(Gdiplus::PixelOffsetModeHighQuality);
+		g.TranslateTransform(static_cast<Gdiplus::REAL>(x), static_cast<Gdiplus::REAL>(y));
+		g.ScaleTransform(static_cast<Gdiplus::REAL>(scale), static_cast<Gdiplus::REAL>(scale));
+		Gdiplus::SolidBrush brush(Gdiplus::Color(255, GetRValue(col), GetGValue(col), GetBValue(col)));
+
+		// <path> 하나 = 경로 하나 (안의 겹침은 evenodd 로 구멍), -1 을 만나면 지금까지를 칠하고 다음 <path>
+		std::vector<Gdiplus::PointF> pts;
+		const float* p = data;
+		for (;;)
+		{
+			Gdiplus::GraphicsPath path(Gdiplus::FillModeAlternate);
+			while (*p > 0)
+			{
+				const int n = static_cast<int>(*p++);
+				pts.resize(n);
+				for (int i = 0; i < n; ++i, p += 2)
+					pts[i] = Gdiplus::PointF(p[0], p[1]);
+				path.StartFigure();
+				path.AddBeziers(pts.data(), n);
+				path.CloseFigure();
+			}
+			g.FillPath(&brush, &path);
+			if (*p < 0)
+			{
+				++p;   // 다음 <path>
+				continue;
+			}
+			break;     // 0 = 끝
+		}
+	}
+
+	void ArrowRight(CDC* dc, double x0, double x1, double cy, double thick, COLORREF col)
+	{
+		if (x1 <= x0 || thick <= 0)
+			return;
+		EnsureGdiPlus();
+		Gdiplus::Graphics g(dc->GetSafeHdc());
+		g.SetSmoothingMode(Gdiplus::SmoothingModeAntiAlias);
+		g.SetPixelOffsetMode(Gdiplus::PixelOffsetModeHalf);
+		Gdiplus::Pen pen(Gdiplus::Color(255, GetRValue(col), GetGValue(col), GetBValue(col)), static_cast<Gdiplus::REAL>(thick));
+		pen.SetStartCap(Gdiplus::LineCapRound);
+		pen.SetEndCap(Gdiplus::LineCapRound);
+		pen.SetLineJoin(Gdiplus::LineJoinRound);
+		const double head = (std::min)((x1 - x0) * 0.45, thick * 3.2);   // 화살촉 크기
+		const auto P = [](double x, double y) { return Gdiplus::PointF(static_cast<Gdiplus::REAL>(x), static_cast<Gdiplus::REAL>(y)); };
+		g.DrawLine(&pen, P(x0, cy), P(x1, cy));
+		const Gdiplus::PointF tip[] = { P(x1 - head, cy - head), P(x1, cy), P(x1 - head, cy + head) };
+		g.DrawLines(&pen, tip, 3);
+	}
+
+	int FemaleCount()
+	{
+		return static_cast<int>(sizeof(kFemaleSet) / sizeof(kFemaleSet[0]));
+	}
+
+	void Female(CDC* dc, const CRect& area, COLORREF col, int index, double fill)
+	{
+		const int n = FemaleCount();
+		if (n <= 0)
+			return;
+		const SilhouetteDef& d = kFemaleSet[((index % n) + n) % n];
+		Silhouette(dc, area, col, d.data, d.vbW, d.vbH, fill);
+	}
+
+	int MaleCount()
+	{
+		return static_cast<int>(sizeof(kMaleSet) / sizeof(kMaleSet[0]));
+	}
+
+	void Male(CDC* dc, const CRect& area, COLORREF col, int index, double fill)
+	{
+		const int n = MaleCount();
+		if (n <= 0)
+			return;
+		const SilhouetteDef& d = kMaleSet[((index % n) + n) % n];
+		Silhouette(dc, area, col, d.data, d.vbW, d.vbH, fill);
+	}
+
+	void Inspect(CDC* dc, const CRect& area, COLORREF col, double fill)
+	{
+		// 돋보기 (테두리 고리 + 손잡이) 안에 재생 삼각형 - 겹치는 부분이 구멍이 되지 않게 따로 그림
+		Paint(dc, area, fill, col, [](Gdiplus::GraphicsPath& p)
+		{
+			p.AddEllipse(1.5f, 1.5f, 16.0f, 16.0f);                // 고리 바깥
+			p.AddEllipse(4.3f, 4.3f, 10.4f, 10.4f);                // 고리 안 (구멍)
+		});
+		Paint(dc, area, fill, col, [](Gdiplus::GraphicsPath& p)
+		{
+			const Gdiplus::PointF tri[3] = { { 7.6f, 6.6f }, { 12.6f, 9.5f }, { 7.6f, 12.4f } };
+			p.AddPolygon(tri, 3);                                   // 재생 (영상)
+		});
+		Paint(dc, area, fill, col, [](Gdiplus::GraphicsPath& p)
+		{
+			const Gdiplus::PointF handle[4] = { { 14.0f, 16.4f }, { 16.4f, 14.0f }, { 22.6f, 20.2f }, { 20.2f, 22.6f } };
+			p.AddPolygon(handle, 4);                                // 손잡이
+		});
+	}
+
+	void Barcode(CDC* dc, const CRect& area, COLORREF col, double fill)
+	{
+		// 굵기가 다른 세로 막대 (품번 = 상품 번호), 아래쪽에 숫자 줄 자리만큼 짧은 막대 몇 개
+		Paint(dc, area, fill, col, [](Gdiplus::GraphicsPath& p)
+		{
+			struct Bar { float x, w; bool tall; };
+			static const Bar bars[] = {
+				{ 2.0f, 2.0f, true }, { 5.0f, 1.0f, false }, { 7.0f, 1.6f, false }, { 9.6f, 2.6f, false },
+				{ 13.2f, 1.0f, false }, { 15.2f, 2.0f, false }, { 18.2f, 1.0f, false }, { 20.0f, 2.0f, true } };
+			for (const Bar& b : bars)
+				p.AddRectangle(Gdiplus::RectF(b.x, 4.0f, b.w, b.tall ? 16.0f : 13.0f));   // 양 끝 막대는 길게 (가드 바)
+			p.AddRectangle(Gdiplus::RectF(5.0f, 18.4f, 6.6f, 1.6f));    // 숫자 줄
+			p.AddRectangle(Gdiplus::RectF(13.2f, 18.4f, 5.8f, 1.6f));
+		});
+	}
+
+	void Plugin(CDC* dc, const CRect& area, COLORREF col, double fill)
+	{
+		// 퍼즐 조각: 네모 몸통 + 위 · 오른쪽 둥근 돌기 (겹치는 부분이 구멍이 되지 않게 따로 칠함)
+		Paint(dc, area, fill, col, [](Gdiplus::GraphicsPath& p)
+		{
+			p.AddRectangle(Gdiplus::RectF(3.0f, 7.5f, 13.5f, 13.5f));   // 몸통
+		});
+		Paint(dc, area, fill, col, [](Gdiplus::GraphicsPath& p)
+		{
+			p.AddEllipse(6.9f, 2.6f, 5.8f, 5.8f);                       // 위 돌기
+		});
+		Paint(dc, area, fill, col, [](Gdiplus::GraphicsPath& p)
+		{
+			p.AddEllipse(15.0f, 11.3f, 5.8f, 5.8f);                     // 오른쪽 돌기
+		});
+	}
+
+	void PieChart(CDC* dc, const CRect& area, COLORREF col, double fill)
+	{
+		// 파이 차트: 3/4 원 몸통 + 오른쪽 위 1/4 조각을 바깥으로 살짝 떼어 냄 (디스크 사용량)
+		Paint(dc, area, fill, col, [](Gdiplus::GraphicsPath& p)
+		{
+			p.AddPie(1.5f, 4.0f, 18.0f, 18.0f, 0.0f, 270.0f);    // 몸통: 중심 (10.5, 13), 반지름 9 - 오른쪽 위 1/4 빼고
+		});
+		Paint(dc, area, fill, col, [](Gdiplus::GraphicsPath& p)
+		{
+			p.AddPie(4.0f, 1.5f, 18.0f, 18.0f, 270.0f, 90.0f);   // 떨어진 조각: 중심을 (+2.5, -2.5) 옮김
+		});
+	}
+}

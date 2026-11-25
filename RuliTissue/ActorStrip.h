@@ -1,0 +1,120 @@
+﻿#pragma once
+
+#include <functional>
+
+// 가로 한 줄 카드 띠 (영상 상세 정보 아래의 출연 배우 카드)
+//  - 카드는 주인이 그림 (m_onDraw), 넘치면 아래에 얇은 가로 스크롤바 (휠 / 끌기 / 트랙 클릭)
+//  - 카드 클릭 = 선택 표시, 더블클릭 = m_onActivate
+class CActorStrip : public CWnd
+{
+public:
+	std::function<void(CDC*, int, const CRect&, bool)> m_onDraw;   // (dc, 카드 번호, 카드 영역, 마우스 오버)
+	std::function<void(int)> m_onActivate;                          // 더블클릭
+	std::function<CString(int)> m_onTip;                            // 마우스 오버 툴팁 (전체 이름)
+	std::function<int(int, const CRect&, CPoint)> m_onHitPart;      // 카드 위 버튼 번호 (0 = 없음, 1 = 하트 …)
+	std::function<void(int, int)> m_onPartClick;                    // 버튼 클릭 (카드 번호, 버튼 번호)
+	int  HotPart() const { return m_hotPart; }                      // 마우스가 올라간 카드의 버튼 번호
+
+	bool Create(CWnd* parent, UINT id);
+	void SetColors(COLORREF back, COLORREF text, COLORREF bar, COLORREF thumb);
+	void SetCardSize(int w, int h, int gap);
+	void SetCount(int count);            // 카드 수 (바뀌면 맨 앞으로 스크롤)
+	void ScrollToStart() { m_scroll = 0; m_vscroll = 0; if (GetSafeHwnd()) Invalidate(FALSE); }   // 가로 · 세로 스크롤을 맨 앞(위)으로
+	void SetEmptyText(const CString& text) { m_empty = text; Invalidate(FALSE); }
+	int  BarHeight() const { return m_barH; }
+	int  CalcHeight() const { return m_cardH + m_barH + 2; }   // 카드 + 스크롤바 자리
+	// 여러 줄 모드: 카드가 폭을 넘으면 다음 줄로 (가로 스크롤 없음) - 제작사 상세의 하위 레이블 카드
+	void SetWrap(bool wrap) { m_wrap = wrap; m_scroll = 0; m_vscroll = 0; if (GetSafeHwnd()) Invalidate(FALSE); }
+	int  CalcWrapHeight(int width) const;   // 이 폭에서 모든 카드가 들어가는 높이
+	int  RowsHeight(int rows) const { return rows <= 0 ? 0 : rows * m_cardH + (rows - 1) * m_gap; }   // 카드 n줄 높이
+	//  여러 줄 모드에서 창 높이보다 카드가 많으면 오른쪽에 얇은 세로 스크롤바 (휠 / 끌기 / 트랙 클릭)
+
+protected:
+	int m_count = 0;
+	bool m_wrap = false;
+	int  PerRow(int width) const { return (std::max)(1, (width + m_gap) / (std::max)(1, m_cardW + m_gap)); }
+	int m_cardW = 80, m_cardH = 120, m_gap = 6;
+	int m_barH = 7;
+	int m_scroll = 0;     // 가로 스크롤 (픽셀)
+	int m_vscroll = 0;    // 여러 줄 모드: 세로 스크롤 (픽셀)
+	bool m_dragVBar = false;
+	int  m_dragStartY = 0, m_dragStartVScroll = 0;
+	bool NeedVBar() const;          // 여러 줄 모드에서 세로 스크롤이 필요한지
+	int  WrapWidth() const;         // 카드를 놓는 폭 (세로 스크롤바 자리 제외)
+	int  MaxVScroll() const;
+	void SetVScroll(int pos);
+	bool VThumbRect(CRect& rc) const;
+	int m_hot = -1;
+	int m_hotPart = 0;
+	bool m_tracking = false;
+	bool m_dragBar = false;
+	int  m_dragStartX = 0, m_dragStartScroll = 0;
+	COLORREF m_back = TCOL(TC_BACK);
+	COLORREF m_text = TCOL(TC_SUB2);
+	COLORREF m_bar = TCOL(TC_THUMB);
+	COLORREF m_thumb = TCOL(TC_SCROLL);
+	CString m_empty;
+	CToolTipCtrl m_tip;
+	int m_tipRow = -1;
+
+	int  ContentWidth() const;
+	int  MaxScroll() const;
+	void SetScroll(int pos);
+	bool ThumbRect(CRect& rc) const;
+	int  HitTest(CPoint pt) const;
+	int  PartAt(int i, CPoint pt) const;
+	CRect CardRect(int i) const;
+
+	afx_msg void OnPaint();
+	afx_msg BOOL OnEraseBkgnd(CDC*) { return TRUE; }
+	afx_msg void OnSize(UINT nType, int cx, int cy);
+	afx_msg BOOL OnMouseWheel(UINT nFlags, short zDelta, CPoint pt);
+	afx_msg void OnMouseHWheel(UINT nFlags, short zDelta, CPoint pt);
+	afx_msg void OnMouseMove(UINT nFlags, CPoint pt);
+	afx_msg LRESULT OnMouseLeave(WPARAM, LPARAM);
+	afx_msg void OnLButtonDown(UINT nFlags, CPoint pt);
+	afx_msg void OnLButtonUp(UINT nFlags, CPoint pt);
+	afx_msg void OnLButtonDblClk(UINT nFlags, CPoint pt);
+	afx_msg void OnCaptureChanged(CWnd* pWnd);
+	virtual BOOL PreTranslateMessage(MSG* pMsg);
+	DECLARE_MESSAGE_MAP()
+};
+
+// 마우스를 올린 항목 옆에 잠깐 띄우는 카드 팝업 (예: 태그 칩 위 → 태그 카드)
+//  - 포커스를 가져가지 않고 마우스도 통과 (아래 컨트롤 그대로 사용), 내용은 주인이 그림 (m_onDraw)
+class CCardPopup : public CWnd
+{
+public:
+	std::function<void(CDC*, const CRect&)> m_onDraw;
+	bool CreatePopup(CWnd* owner);
+	void ShowNear(const CRect& anchorScreen, CSize size, bool preferBelow = false);
+	void ShowCentered(const CRect& anchorScreen, CSize size);   // 기준 영역 가운데에 겹쳐서 (모니터 작업 영역 안으로)   // 기준 영역 위(공간이 없으면 아래)에 표시, preferBelow = 아래 먼저 (공간이 없으면 위)
+	void Hide();
+	COLORREF m_back = TCOL(TC_BACK);
+	// 마우스: 기본은 통과 (아래 창이 받음), m_interactive = true 면 팝업이 받아 m_onMouse 로 (WM_MOUSEMOVE · LBUTTONDOWN · LBUTTONDBLCLK · RBUTTONUP, 클라이언트 좌표)
+	bool m_interactive = false;
+	std::function<void(UINT msg, CPoint client)> m_onMouse;
+	std::function<void(WPARAM, LPARAM)> m_onWheel;   // 휠 (예: 아래 격자로 넘겨 스크롤)
+	// 부드럽게 나타나기: 0 보다 크면 숨어 있다가 보일 때 이 시간(ms) 동안 투명 → 불투명 (끝나면 보통 창으로 - 안의 재생 창 등도 그대로 보이게)
+	int  m_fadeMs = 0;
+	bool IsFading() const { return m_fading; }
+
+protected:
+	bool      m_fading = false;
+	ULONGLONG m_fadeStart = 0;
+	static const UINT_PTR kFadeTimer = 1;
+	void PlaceAndShow(int x, int y, int cx, int cy);   // 자리 · 크기 맞춰 보임 (숨어 있었으면 m_fadeMs 로 나타남)
+	void EndFade();                                    // 투명 효과 끝 (불투명 · 보통 창)
+	afx_msg void OnTimer(UINT_PTR nIDEvent);
+	afx_msg void OnPaint();
+	afx_msg BOOL OnEraseBkgnd(CDC*) { return TRUE; }
+	afx_msg LRESULT OnNcHitTest(CPoint) { return m_interactive ? HTCLIENT : HTTRANSPARENT; }
+	afx_msg void OnMouseMove(UINT, CPoint pt) { if (m_onMouse) m_onMouse(WM_MOUSEMOVE, pt); }
+	afx_msg void OnLButtonDown(UINT, CPoint pt) { if (m_onMouse) m_onMouse(WM_LBUTTONDOWN, pt); }
+	afx_msg void OnLButtonDblClk(UINT, CPoint pt) { if (m_onMouse) m_onMouse(WM_LBUTTONDBLCLK, pt); }
+	afx_msg void OnRButtonUp(UINT, CPoint pt) { if (m_onMouse) m_onMouse(WM_RBUTTONUP, pt); }
+	afx_msg BOOL OnMouseWheel(UINT nFlags, short zDelta, CPoint pt) { if (m_onWheel) m_onWheel(MAKEWPARAM(nFlags, zDelta), MAKELPARAM(pt.x, pt.y)); return TRUE; }
+	afx_msg int OnMouseActivate(CWnd*, UINT, UINT) { return MA_NOACTIVATE; }
+	DECLARE_MESSAGE_MAP()
+};
+
